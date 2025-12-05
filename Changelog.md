@@ -1,5 +1,6 @@
 # CHANGELOG
 
+- **2.4.5** - 05.12.2025 - Change URL
 - **2.4.4** - 05.12.2025 - Fix Pylance Errors
 - **2.4.3** - 05.12.2025 - Refactor: Extract duplicated code to lib.py, standardize imports and param access
 - **2.4.2** - 05.12.2025 - Add Manpages

@@ -12,3 +12,9 @@ lib
 nagios_plugins
 plugins_legacy
 package
+.DS_Store
+.claude
+bin/
+claude.md
+test/
+.gitignore
