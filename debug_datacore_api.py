@@ -10,11 +10,14 @@ Usage:
     python3 debug_datacore_api.py --host 10.64.36.41 --user USERNAME --password PASSWORD --nodename SERVERNAME
 """
 
+from __future__ import annotations
+
 import argparse
 import base64
 import json
 import sys
 import urllib3
+from typing import Optional
 
 # Disable SSL warnings for self-signed certificates
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -59,7 +62,7 @@ def test_api_call(
     headers: dict,
     test_name: str,
     verify_ssl: bool = False,
-) -> requests.Response | None:
+) -> Optional[requests.Response]:
     """Make an API call and print results."""
     print(f"\nTesting: {test_name}")
     print(f"URL: {url}")
