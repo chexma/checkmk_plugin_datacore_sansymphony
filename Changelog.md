@@ -1,5 +1,8 @@
 # CHANGELOG
 
+- **2.4.7** - 12.12.2025 - raise rest api timeouts
+- **2.4.6** - 12.12.2025 - catch api error 400
+- **2.4.5** - 05.12.2025 - Change URL
 - **2.4.5** - 05.12.2025 - Change URL
 - **2.4.4** - 05.12.2025 - Fix Pylance Errors
 - **2.4.3** - 05.12.2025 - Refactor: Extract duplicated code to lib.py, standardize imports and param access

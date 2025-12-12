@@ -115,13 +115,18 @@ def get_objects(object_name, api_url_base, headers, session, args):
         response = session.get(
             f"{api_url_base}/{object_name}",
             headers=headers,
-            timeout=5,
+            timeout=30,
             verify=args.verify_ssl,
         )
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
         logging.error("Error fetching %s section: %s", object_name, e)
+        if "400" in str(e):
+            logging.error(
+                "Hint: A 400 Bad Request often indicates an incorrect 'nodename' parameter. "
+                "Ensure the nodename exactly matches the DataCore server Caption (case-sensitive)."
+            )
         sys.exit(1)
 
 
@@ -136,7 +141,7 @@ def request_object_perfdata(data_object, api_url_base, headers, session, args):
         response = session.get(
             f'{api_url_base}/performance/{data_object["Id"]}',
             headers=headers,
-            timeout=5,
+            timeout=30,
             verify=args.verify_ssl,
         )
         response.raise_for_status()
@@ -237,6 +242,8 @@ def agent_datacore_rest_main(args: Any = None) -> int:
     headers = {
         "ServerHost": args.nodename,
         "Authorization": f"Basic {auth_bytes}",
+        "Content-Type": "application/json; charset=utf-8",
+        "Accept": "application/json",
     }
     base_api_url = f"{args.proto}://{args.host}/RestService/rest.svc"
 
