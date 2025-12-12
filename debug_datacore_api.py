@@ -9,13 +9,12 @@ the DataCore SANsymphony REST API.
 Tests performed:
 - Network connectivity (DNS, TCP port)
 - SSL/TLS handshake and certificate details
-- Authentication (with/without credentials)
-- REST API endpoints (v1.0 and v2.0)
+- REST API endpoints (v1.0 and v2.0) with ServerHost header
 - ServerHost header variations
-- Response analysis
+- Available servers listing
 
 Usage:
-    python3 debug_datacore_api.py --host 10.64.36.41 --user USERNAME --password PASSWORD --nodename SERVERNAME
+    python3 debug_datacore_api.py --host 192.168.1.1 --user administrator --password SECRET --nodename ssv-node1
 """
 
 from __future__ import annotations
@@ -65,32 +64,38 @@ class Colors:
         cls.GREEN = cls.RED = cls.YELLOW = cls.BLUE = cls.CYAN = cls.BOLD = cls.END = ''
 
 
-def ok(msg: str) -> str:
-    return f"{Colors.GREEN}✓ {msg}{Colors.END}"
+def ok(msg):
+    # type: (str) -> str
+    return "{GREEN}✓ {msg}{END}".format(GREEN=Colors.GREEN, msg=msg, END=Colors.END)
 
 
-def fail(msg: str) -> str:
-    return f"{Colors.RED}✗ {msg}{Colors.END}"
+def fail(msg):
+    # type: (str) -> str
+    return "{RED}✗ {msg}{END}".format(RED=Colors.RED, msg=msg, END=Colors.END)
 
 
-def warn(msg: str) -> str:
-    return f"{Colors.YELLOW}⚠ {msg}{Colors.END}"
+def warn(msg):
+    # type: (str) -> str
+    return "{YELLOW}⚠ {msg}{END}".format(YELLOW=Colors.YELLOW, msg=msg, END=Colors.END)
 
 
-def info(msg: str) -> str:
-    return f"{Colors.BLUE}ℹ {msg}{Colors.END}"
+def info(msg):
+    # type: (str) -> str
+    return "{BLUE}ℹ {msg}{END}".format(BLUE=Colors.BLUE, msg=msg, END=Colors.END)
 
 
-def print_header(title: str) -> None:
+def print_header(title):
+    # type: (str) -> None
     """Print a section header."""
-    print(f"\n{Colors.BOLD}{'=' * 70}")
-    print(f"  {title}")
-    print(f"{'=' * 70}{Colors.END}")
+    print("\n{BOLD}{line}".format(BOLD=Colors.BOLD, line="=" * 70))
+    print("  {title}".format(title=title))
+    print("{line}{END}".format(line="=" * 70, END=Colors.END))
 
 
-def print_subheader(title: str) -> None:
+def print_subheader(title):
+    # type: (str) -> None
     """Print a subsection header."""
-    print(f"\n{Colors.CYAN}--- {title} ---{Colors.END}")
+    print("\n{CYAN}--- {title} ---{END}".format(CYAN=Colors.CYAN, title=title, END=Colors.END))
 
 
 # =============================================================================
@@ -101,52 +106,57 @@ class TestResults:
     """Collect and summarize test results."""
 
     def __init__(self):
-        self.results: List[Tuple[str, str, str]] = []  # (category, test_name, status)
-        self.details: Dict[str, Any] = {}
+        self.results = []  # type: List[Tuple[str, str, str]]
+        self.details = {}  # type: Dict[str, Any]
 
-    def add(self, category: str, test_name: str, passed: bool, detail: str = "") -> None:
+    def add(self, category, test_name, passed, detail=""):
+        # type: (str, str, bool, str) -> None
         status = "PASS" if passed else "FAIL"
         self.results.append((category, test_name, status))
         if detail:
-            self.details[f"{category}:{test_name}"] = detail
+            self.details["{cat}:{test}".format(cat=category, test=test_name)] = detail
 
-    def add_warning(self, category: str, test_name: str, detail: str = "") -> None:
+    def add_warning(self, category, test_name, detail=""):
+        # type: (str, str, str) -> None
         self.results.append((category, test_name, "WARN"))
         if detail:
-            self.details[f"{category}:{test_name}"] = detail
+            self.details["{cat}:{test}".format(cat=category, test=test_name)] = detail
 
-    def print_summary(self) -> None:
+    def print_summary(self):
+        # type: () -> None
         print_header("TEST SUMMARY")
 
         current_category = ""
         for category, test_name, status in self.results:
             if category != current_category:
-                print(f"\n{Colors.BOLD}{category}:{Colors.END}")
+                print("\n{BOLD}{cat}:{END}".format(BOLD=Colors.BOLD, cat=category, END=Colors.END))
                 current_category = category
 
             if status == "PASS":
-                print(f"  {ok(test_name)}")
+                print("  {result}".format(result=ok(test_name)))
             elif status == "FAIL":
-                print(f"  {fail(test_name)}")
+                print("  {result}".format(result=fail(test_name)))
             else:
-                print(f"  {warn(test_name)}")
+                print("  {result}".format(result=warn(test_name)))
 
         # Count results
         passed = sum(1 for _, _, s in self.results if s == "PASS")
         failed = sum(1 for _, _, s in self.results if s == "FAIL")
         warnings = sum(1 for _, _, s in self.results if s == "WARN")
 
-        print(f"\n{Colors.BOLD}Total: {passed} passed, {failed} failed, {warnings} warnings{Colors.END}")
+        print("\n{BOLD}Total: {p} passed, {f} failed, {w} warnings{END}".format(
+            BOLD=Colors.BOLD, p=passed, f=failed, w=warnings, END=Colors.END))
 
 
-def test_dns_resolution(host: str, results: TestResults) -> Optional[str]:
+def test_dns_resolution(host, results):
+    # type: (str, TestResults) -> Optional[str]
     """Test DNS resolution for hostname."""
     print_subheader("DNS Resolution")
 
     # Check if host is already an IP
     try:
         socket.inet_aton(host)
-        print(info(f"Host '{host}' is already an IP address"))
+        print(info("Host '{host}' is already an IP address".format(host=host)))
         results.add("Network", "DNS Resolution", True, "IP address provided")
         return host
     except socket.error:
@@ -155,18 +165,19 @@ def test_dns_resolution(host: str, results: TestResults) -> Optional[str]:
     # Try to resolve hostname
     try:
         ip = socket.gethostbyname(host)
-        print(ok(f"Resolved '{host}' to {ip}"))
-        results.add("Network", "DNS Resolution", True, f"Resolved to {ip}")
+        print(ok("Resolved '{host}' to {ip}".format(host=host, ip=ip)))
+        results.add("Network", "DNS Resolution", True, "Resolved to {ip}".format(ip=ip))
         return ip
     except socket.gaierror as e:
-        print(fail(f"DNS resolution failed for '{host}': {e}"))
+        print(fail("DNS resolution failed for '{host}': {e}".format(host=host, e=e)))
         results.add("Network", "DNS Resolution", False, str(e))
         return None
 
 
-def test_tcp_connection(host: str, port: int, results: TestResults) -> bool:
+def test_tcp_connection(host, port, results):
+    # type: (str, int, TestResults) -> bool
     """Test TCP connection to host:port."""
-    print_subheader(f"TCP Connection (Port {port})")
+    print_subheader("TCP Connection (Port {port})".format(port=port))
 
     try:
         start = time.time()
@@ -177,28 +188,29 @@ def test_tcp_connection(host: str, port: int, results: TestResults) -> bool:
         sock.close()
 
         if result == 0:
-            print(ok(f"Port {port} is open (connected in {elapsed:.1f}ms)"))
-            results.add("Network", f"TCP Port {port}", True, f"{elapsed:.1f}ms")
+            print(ok("Port {port} is open (connected in {elapsed:.1f}ms)".format(port=port, elapsed=elapsed)))
+            results.add("Network", "TCP Port {port}".format(port=port), True, "{elapsed:.1f}ms".format(elapsed=elapsed))
             return True
         else:
-            print(fail(f"Port {port} is closed or filtered"))
-            results.add("Network", f"TCP Port {port}", False, "Connection refused")
+            print(fail("Port {port} is closed or filtered".format(port=port)))
+            results.add("Network", "TCP Port {port}".format(port=port), False, "Connection refused")
             return False
     except socket.timeout:
-        print(fail(f"Connection to port {port} timed out"))
-        results.add("Network", f"TCP Port {port}", False, "Timeout")
+        print(fail("Connection to port {port} timed out".format(port=port)))
+        results.add("Network", "TCP Port {port}".format(port=port), False, "Timeout")
         return False
     except Exception as e:
-        print(fail(f"Connection error: {e}"))
-        results.add("Network", f"TCP Port {port}", False, str(e))
+        print(fail("Connection error: {e}".format(e=e)))
+        results.add("Network", "TCP Port {port}".format(port=port), False, str(e))
         return False
 
 
-def test_ssl_certificate(host: str, port: int, results: TestResults) -> Dict[str, Any]:
+def test_ssl_certificate(host, port, results):
+    # type: (str, int, TestResults) -> Dict[str, Any]
     """Test SSL/TLS connection and get certificate details."""
     print_subheader("SSL/TLS Certificate")
 
-    cert_info = {}
+    cert_info = {}  # type: Dict[str, Any]
 
     try:
         context = ssl.create_default_context()
@@ -214,9 +226,9 @@ def test_ssl_certificate(host: str, port: int, results: TestResults) -> Dict[str
                 # Parse certificate using ssl
                 cert_decoded = ssl.DER_cert_to_PEM_cert(cert)
 
-                print(ok(f"SSL/TLS Handshake successful"))
-                print(f"    Protocol: {version}")
-                print(f"    Cipher: {cipher[0]} ({cipher[2]} bits)")
+                print(ok("SSL/TLS Handshake successful"))
+                print("    Protocol: {version}".format(version=version))
+                print("    Cipher: {cipher} ({bits} bits)".format(cipher=cipher[0], bits=cipher[2]))
 
                 cert_info['protocol'] = version
                 cert_info['cipher'] = cipher[0]
@@ -233,9 +245,9 @@ def test_ssl_certificate(host: str, port: int, results: TestResults) -> Dict[str
                     )
                     if proc.returncode == 0:
                         output = proc.stdout.decode()
-                        print(f"\n    Certificate Details:")
+                        print("\n    Certificate Details:")
                         for line in output.strip().split('\n'):
-                            print(f"      {line}")
+                            print("      {line}".format(line=line))
                             if 'subject=' in line.lower():
                                 cert_info['subject'] = line.split('=', 1)[1] if '=' in line else line
                             elif 'issuer=' in line.lower():
@@ -251,33 +263,34 @@ def test_ssl_certificate(host: str, port: int, results: TestResults) -> Dict[str
                     print(info("(Could not parse certificate details - openssl not available)"))
                     results.add("SSL/TLS", "Certificate", True, "Details unavailable")
 
-                results.add("SSL/TLS", "Handshake", True, f"{version} / {cipher[0]}")
+                results.add("SSL/TLS", "Handshake", True, "{version} / {cipher}".format(version=version, cipher=cipher[0]))
                 return cert_info
 
     except ssl.SSLError as e:
-        print(fail(f"SSL Error: {e}"))
+        print(fail("SSL Error: {e}".format(e=e)))
         results.add("SSL/TLS", "Handshake", False, str(e))
         return {}
     except Exception as e:
-        print(fail(f"Connection error: {e}"))
+        print(fail("Connection error: {e}".format(e=e)))
         results.add("SSL/TLS", "Handshake", False, str(e))
         return {}
 
 
 def test_http_request(
-    session: requests.Session,
-    url: str,
-    headers: Dict[str, str],
-    test_name: str,
-    results: TestResults,
-    category: str = "API",
-    verify_ssl: bool = False,
-    expect_status: Optional[int] = None,
-) -> Optional[requests.Response]:
+    session,
+    url,
+    headers,
+    test_name,
+    results,
+    category="API",
+    verify_ssl=False,
+    show_body_on_success=False,
+):
+    # type: (requests.Session, str, Dict[str, str], str, TestResults, str, bool, bool) -> Optional[requests.Response]
     """Make an HTTP request and analyze the response."""
 
-    print(f"\n  Testing: {test_name}")
-    print(f"  URL: {url}")
+    print("\n  Testing: {test_name}".format(test_name=test_name))
+    print("  URL: {url}".format(url=url))
 
     # Show headers (hide password)
     headers_display = {}
@@ -286,75 +299,60 @@ def test_http_request(
             headers_display[k] = 'Basic ***HIDDEN***'
         else:
             headers_display[k] = v
-    print(f"  Headers: {headers_display}")
+    print("  Headers: {headers}".format(headers=headers_display))
 
     try:
         start = time.time()
-        response = session.get(url, headers=headers, timeout=10, verify=verify_ssl)
+        response = session.get(url, headers=headers, timeout=15, verify=verify_ssl)
         elapsed = (time.time() - start) * 1000
 
         status_ok = response.status_code == 200
-        if expect_status:
-            status_ok = response.status_code == expect_status
 
         # Print result
-        status_icon = ok if status_ok else fail
-        print(f"  {status_icon(f'Status: {response.status_code} ({elapsed:.0f}ms)')}")
+        if status_ok:
+            print("  {result}".format(result=ok("Status: {code} ({elapsed:.0f}ms)".format(code=response.status_code, elapsed=elapsed))))
+        else:
+            print("  {result}".format(result=fail("Status: {code} ({elapsed:.0f}ms)".format(code=response.status_code, elapsed=elapsed))))
 
-        # Show response body for errors
-        if not status_ok or response.status_code >= 400:
-            print(f"  Response Body ({len(response.content)} bytes):")
+        # Show response body for errors or if requested
+        if not status_ok or response.status_code >= 400 or show_body_on_success:
+            print("  Response Body ({length} bytes):".format(length=len(response.content)))
             try:
                 json_resp = response.json()
-                print(f"    {json.dumps(json_resp, indent=4)}")
+                print("    {body}".format(body=json.dumps(json_resp, indent=4)))
             except json.JSONDecodeError:
                 body = response.text[:500] if response.text else "(empty)"
-                print(f"    {body}")
+                print("    {body}".format(body=body))
 
-        results.add(category, test_name, status_ok, f"HTTP {response.status_code}")
+        results.add(category, test_name, status_ok, "HTTP {code}".format(code=response.status_code))
         return response
 
     except requests.exceptions.Timeout:
-        print(f"  {fail('Request timed out')}")
+        print("  {result}".format(result=fail("Request timed out")))
         results.add(category, test_name, False, "Timeout")
         return None
     except requests.exceptions.ConnectionError as e:
-        print(f"  {fail(f'Connection error: {e}')}")
+        print("  {result}".format(result=fail("Connection error: {e}".format(e=e))))
         results.add(category, test_name, False, "Connection error")
         return None
     except Exception as e:
-        print(f"  {fail(f'Error: {e}')}")
+        print("  {result}".format(result=fail("Error: {e}".format(e=e))))
         results.add(category, test_name, False, str(e))
         return None
-
-
-def interpret_status_code(code: int) -> str:
-    """Return explanation for HTTP status code."""
-    explanations = {
-        200: "OK - Request successful",
-        400: "Bad Request - Invalid request format, wrong headers, or invalid parameter values",
-        401: "Unauthorized - Authentication required or credentials invalid",
-        403: "Forbidden - Authentication successful but access denied",
-        404: "Not Found - Endpoint does not exist",
-        405: "Method Not Allowed - HTTP method not supported for this endpoint",
-        500: "Internal Server Error - Server-side error",
-        502: "Bad Gateway - Proxy/gateway error",
-        503: "Service Unavailable - Server temporarily unavailable",
-    }
-    return explanations.get(code, f"Unknown status code {code}")
 
 
 # =============================================================================
 # Main Function
 # =============================================================================
 
-def main() -> int:
+def main():
+    # type: () -> int
     parser = argparse.ArgumentParser(
         description="Debug DataCore REST API connection issues (Extended Version)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-    python3 debug_datacore_api.py --host 10.64.36.41 --user admin --password secret --nodename SSV1
+    python3 debug_datacore_api.py --host 192.168.1.1 --user admin --password secret --nodename SSV1
     python3 debug_datacore_api.py --host datacore.local --user admin --password secret --nodename Server01 --no-color
         """,
     )
@@ -377,12 +375,21 @@ Examples:
     port = args.port or (443 if args.proto == "https" else 80)
 
     # Build URLs
-    base_url = f"{args.proto}://{args.host}:{port}/RestService/rest.svc"
+    base_url = "{proto}://{host}:{port}/RestService/rest.svc".format(
+        proto=args.proto, host=args.host, port=port)
 
     # Create auth header
-    auth_string = f"{args.user}:{args.password}"
+    auth_string = "{user}:{password}".format(user=args.user, password=args.password)
     auth_bytes = base64.b64encode(auth_string.encode()).decode()
-    auth_header = f"Basic {auth_bytes}"
+    auth_header = "Basic {auth}".format(auth=auth_bytes)
+
+    # Standard headers (ServerHost is REQUIRED for DataCore REST API)
+    std_headers = {
+        "Authorization": auth_header,
+        "Content-Type": "application/json; charset=utf-8",
+        "Accept": "application/json",
+        "ServerHost": args.nodename,
+    }
 
     # Create session
     session = requests.Session()
@@ -392,12 +399,12 @@ Examples:
     # HEADER: System Info
     # =========================================================================
     print_header("DataCore REST API Debug Script (Extended)")
-    print(f"  Timestamp: {datetime.now().isoformat()}")
-    print(f"  Python: {sys.version.split()[0]}")
-    print(f"  Requests: {REQUESTS_VERSION}")
-    print(f"  Target: {args.proto}://{args.host}:{port}")
-    print(f"  User: {args.user}")
-    print(f"  Nodename: {args.nodename}")
+    print("  Timestamp: {ts}".format(ts=datetime.now().isoformat()))
+    print("  Python: {ver}".format(ver=sys.version.split()[0]))
+    print("  Requests: {ver}".format(ver=REQUESTS_VERSION))
+    print("  Target: {proto}://{host}:{port}".format(proto=args.proto, host=args.host, port=port))
+    print("  User: {user}".format(user=args.user))
+    print("  Nodename: {nodename}".format(nodename=args.nodename))
 
     # =========================================================================
     # TEST 1: Network Connectivity
@@ -412,7 +419,7 @@ Examples:
 
     tcp_ok = test_tcp_connection(resolved_ip, port, results)
     if not tcp_ok:
-        print(fail(f"\nCannot proceed - port {port} not reachable"))
+        print(fail("\nCannot proceed - port {port} not reachable".format(port=port)))
         results.print_summary()
         return 1
 
@@ -421,82 +428,54 @@ Examples:
     # =========================================================================
     if args.proto == "https":
         print_header("2. SSL/TLS CERTIFICATE")
-        cert_info = test_ssl_certificate(resolved_ip, port, results)
+        test_ssl_certificate(resolved_ip, port, results)
     else:
         print_header("2. SSL/TLS CERTIFICATE")
         print(info("Skipped (using HTTP)"))
 
     # =========================================================================
-    # TEST 3: Authentication
+    # TEST 3: Authentication (with ServerHost header)
     # =========================================================================
     print_header("3. AUTHENTICATION")
 
-    # Test without credentials
-    print_subheader("Without Credentials (expect 401)")
-    test_http_request(
-        session, f"{base_url}/1.0/servers",
-        {"Content-Type": "application/json", "Accept": "application/json"},
-        "No Auth", results, "Auth", args.verify_ssl, expect_status=401
-    )
-
-    # Test with wrong credentials
-    print_subheader("With Wrong Credentials (expect 401/403)")
-    wrong_auth = base64.b64encode(b"wronguser:wrongpass").decode()
-    test_http_request(
-        session, f"{base_url}/1.0/servers",
-        {
-            "Authorization": f"Basic {wrong_auth}",
-            "Content-Type": "application/json",
-            "Accept": "application/json"
-        },
-        "Wrong Credentials", results, "Auth", args.verify_ssl, expect_status=401
-    )
-
-    # Test with correct credentials
-    print_subheader("With Provided Credentials")
+    print_subheader("With Provided Credentials + ServerHost")
     auth_response = test_http_request(
-        session, f"{base_url}/1.0/servers",
-        {
-            "Authorization": auth_header,
-            "Content-Type": "application/json",
-            "Accept": "application/json"
-        },
-        "Correct Credentials", results, "Auth", args.verify_ssl
+        session, "{base}/1.0/servers".format(base=base_url),
+        std_headers,
+        "Authentication Test", results, "Auth", args.verify_ssl
     )
+
+    if auth_response and auth_response.status_code != 200:
+        # Show hint for common errors
+        try:
+            error_json = auth_response.json()
+            error_msg = error_json.get("Message", "")
+            if "authorization" in error_msg.lower():
+                print("\n  {hint}".format(hint=warn("Hint: Check username/password")))
+            elif "serverhost" in error_msg.lower():
+                print("\n  {hint}".format(hint=warn("Hint: ServerHost header value may be incorrect")))
+        except Exception:
+            pass
 
     # =========================================================================
     # TEST 4: API Endpoints
     # =========================================================================
     print_header("4. REST API ENDPOINTS")
 
-    # Standard headers for all API tests
-    std_headers = {
-        "Authorization": auth_header,
-        "Content-Type": "application/json; charset=utf-8",
-        "Accept": "application/json",
-    }
-
-    # API Root
-    print_subheader("API Root")
-    test_http_request(
-        session, f"{args.proto}://{args.host}:{port}/RestService/rest.svc",
-        std_headers, "API Root", results, "API", args.verify_ssl
-    )
-
     # API v1.0 endpoints
     print_subheader("API Version 1.0")
-    for endpoint in ["servers", "pools", "alerts"]:
+    for endpoint in ["servers", "pools", "alerts", "ports", "hostgroups", "snapshots"]:
         test_http_request(
-            session, f"{base_url}/1.0/{endpoint}",
-            std_headers, f"v1.0/{endpoint}", results, "API v1.0", args.verify_ssl
+            session, "{base}/1.0/{endpoint}".format(base=base_url, endpoint=endpoint),
+            std_headers, "v1.0/{endpoint}".format(endpoint=endpoint), results, "API v1.0", args.verify_ssl
         )
 
     # API v2.0 endpoints
     print_subheader("API Version 2.0")
-    for endpoint in ["servers", "pools", "virtualdisks"]:
+    for endpoint in ["servers", "pools", "virtualdisks", "physicaldisks", "hosts"]:
         test_http_request(
-            session, f"{base_url}/2.0/{endpoint}",
-            std_headers, f"v2.0/{endpoint}", results, "API v2.0", args.verify_ssl
+            session, "{base}/2.0/{endpoint}".format(base=base_url, endpoint=endpoint),
+            std_headers, "v2.0/{endpoint}".format(endpoint=endpoint), results, "API v2.0", args.verify_ssl
         )
 
     # =========================================================================
@@ -504,19 +483,25 @@ Examples:
     # =========================================================================
     print_header("5. SERVERHOST HEADER VARIATIONS")
 
+    # Headers without ServerHost
+    headers_no_sh = {
+        "Authorization": auth_header,
+        "Content-Type": "application/json; charset=utf-8",
+        "Accept": "application/json",
+    }
+
     serverhost_tests = [
-        ("No ServerHost", {}),
-        ("Empty ServerHost", {"ServerHost": ""}),
-        ("Original", {"ServerHost": args.nodename}),
-        ("Lowercase", {"ServerHost": args.nodename.lower()}),
-        ("Uppercase", {"ServerHost": args.nodename.upper()}),
+        ("No ServerHost", headers_no_sh),
+        ("Empty ServerHost", {**headers_no_sh, "ServerHost": ""}),
+        ("Original: {n}".format(n=args.nodename), {**headers_no_sh, "ServerHost": args.nodename}),
+        ("Lowercase: {n}".format(n=args.nodename.lower()), {**headers_no_sh, "ServerHost": args.nodename.lower()}),
+        ("Uppercase: {n}".format(n=args.nodename.upper()), {**headers_no_sh, "ServerHost": args.nodename.upper()}),
     ]
 
-    for test_name, extra_headers in serverhost_tests:
-        headers = {**std_headers, **extra_headers}
-        print_subheader(f"ServerHost: {test_name}")
+    for test_name, headers in serverhost_tests:
+        print_subheader("ServerHost: {name}".format(name=test_name))
         test_http_request(
-            session, f"{base_url}/1.0/servers",
+            session, "{base}/1.0/servers".format(base=base_url),
             headers, test_name, results, "ServerHost", args.verify_ssl
         )
 
@@ -525,41 +510,84 @@ Examples:
     # =========================================================================
     print_header("6. AVAILABLE SERVERS")
 
-    # Try to get server list
+    # Try to get server list (with ServerHost header)
     try:
         resp = session.get(
-            f"{base_url}/1.0/servers",
+            "{base}/1.0/servers".format(base=base_url),
             headers=std_headers,
-            timeout=10,
+            timeout=15,
             verify=args.verify_ssl
         )
         if resp.status_code == 200:
             servers = resp.json()
-            print(ok(f"Found {len(servers)} server(s):"))
+            print(ok("Found {count} server(s):".format(count=len(servers))))
             for server in servers:
                 caption = server.get("Caption", "Unknown")
                 hostname = server.get("HostName", "Unknown")
                 server_id = server.get("Id", "Unknown")
                 state = server.get("State", "Unknown")
-                print(f"\n  {Colors.BOLD}{caption}{Colors.END}")
-                print(f"    HostName: {hostname}")
-                print(f"    ID: {server_id}")
-                print(f"    State: {state}")
+                product_version = server.get("ProductVersion", "Unknown")
+                print("\n  {BOLD}{caption}{END}".format(BOLD=Colors.BOLD, caption=caption, END=Colors.END))
+                print("    HostName: {hostname}".format(hostname=hostname))
+                print("    ID: {id}".format(id=server_id))
+                print("    State: {state}".format(state=state))
+                print("    Version: {ver}".format(ver=product_version))
 
                 # Check if this matches the provided nodename
                 if caption.lower() == args.nodename.lower():
                     if caption == args.nodename:
-                        print(f"    {ok('Matches provided nodename (exact)')}")
+                        print("    {result}".format(result=ok("Matches provided nodename (exact)")))
                     else:
-                        print(f"    {warn(f'Matches but case differs! Use: {caption}')}")
+                        print("    {result}".format(result=warn("Matches but case differs! Use: {caption}".format(caption=caption))))
         else:
-            print(fail(f"Could not retrieve server list (HTTP {resp.status_code})"))
+            print(fail("Could not retrieve server list (HTTP {code})".format(code=resp.status_code)))
             try:
-                print(f"  Response: {resp.json()}")
-            except:
-                print(f"  Response: {resp.text[:200]}")
+                print("  Response: {body}".format(body=resp.json()))
+            except Exception:
+                print("  Response: {body}".format(body=resp.text[:200]))
     except Exception as e:
-        print(fail(f"Error retrieving server list: {e}"))
+        print(fail("Error retrieving server list: {e}".format(e=e)))
+
+    # =========================================================================
+    # TEST 7: Performance Data Endpoints
+    # =========================================================================
+    print_header("7. PERFORMANCE DATA ENDPOINTS")
+
+    # Try to get a pool and then its performance data
+    try:
+        resp = session.get(
+            "{base}/2.0/pools".format(base=base_url),
+            headers=std_headers,
+            timeout=15,
+            verify=args.verify_ssl
+        )
+        if resp.status_code == 200:
+            pools = resp.json()
+            if pools:
+                pool = pools[0]
+                pool_id = pool.get("Id", "")
+                pool_name = pool.get("Caption", "Unknown")
+                print(info("Testing performance endpoint for pool: {name}".format(name=pool_name)))
+
+                # Test v1.0 performance endpoint
+                print_subheader("v1.0 Performance Data")
+                test_http_request(
+                    session, "{base}/1.0/performance/{id}".format(base=base_url, id=pool_id),
+                    std_headers, "v1.0/performance (Pool)", results, "Performance", args.verify_ssl
+                )
+
+                # Test v2.0 performance endpoint
+                print_subheader("v2.0 Performance Data")
+                test_http_request(
+                    session, "{base}/2.0/pools/{id}/performance".format(base=base_url, id=pool_id),
+                    std_headers, "v2.0/pools/ID/performance", results, "Performance", args.verify_ssl
+                )
+            else:
+                print(info("No pools found to test performance endpoints"))
+        else:
+            print(warn("Could not get pools to test performance endpoints"))
+    except Exception as e:
+        print(warn("Could not test performance endpoints: {e}".format(e=e)))
 
     # =========================================================================
     # SUMMARY AND RECOMMENDATIONS
@@ -573,45 +601,67 @@ Examples:
 
     # Check auth issues
     auth_results = [r for r in results.results if r[0] == "Auth"]
-    if any(r[2] == "FAIL" and "Correct" in r[1] for r in auth_results):
+    if any(r[2] == "FAIL" for r in auth_results):
         recommendations.append("- Check username and password are correct")
         recommendations.append("- Verify the user has REST API access permissions in DataCore")
+        recommendations.append("- Ensure the ServerHost (nodename) value is correct")
 
     # Check ServerHost issues
     sh_results = [r for r in results.results if r[0] == "ServerHost"]
     working_sh = [r[1] for r in sh_results if r[2] == "PASS"]
+    failed_sh = [r[1] for r in sh_results if r[2] == "FAIL"]
+
+    if "No ServerHost" in failed_sh:
+        recommendations.append("- ServerHost header is REQUIRED for this DataCore installation")
+
     if working_sh:
-        if "No ServerHost" in working_sh:
-            recommendations.append("- ServerHost header is NOT required for this API")
-        elif "Original" not in working_sh:
-            for w in working_sh:
-                if w != "No ServerHost":
-                    recommendations.append(f"- Use ServerHost value: {w}")
-                    break
-    else:
-        recommendations.append("- All ServerHost variations failed - check if the nodename exists")
-        recommendations.append(f"- Verify '{args.nodename}' matches a server Caption exactly")
+        # Find the best working ServerHost value
+        for w in working_sh:
+            if "Original" in w:
+                recommendations.append("- ServerHost '{nodename}' works correctly".format(nodename=args.nodename))
+                break
+            elif "Lowercase" in w and "Original" not in working_sh:
+                recommendations.append("- Use lowercase ServerHost: {n}".format(n=args.nodename.lower()))
+                break
+            elif "Uppercase" in w and "Original" not in working_sh and "Lowercase" not in working_sh:
+                recommendations.append("- Use uppercase ServerHost: {n}".format(n=args.nodename.upper()))
+                break
 
     # Check API version issues
     v1_results = [r for r in results.results if r[0] == "API v1.0"]
     v2_results = [r for r in results.results if r[0] == "API v2.0"]
 
-    v1_failed = all(r[2] == "FAIL" for r in v1_results)
+    v1_ok = any(r[2] == "PASS" for r in v1_results)
     v2_ok = any(r[2] == "PASS" for r in v2_results)
 
-    if v1_failed and v2_ok:
-        recommendations.append("- API v1.0 endpoints fail but v2.0 works")
-        recommendations.append("- Consider using API v2.0 for server lookup in special agent")
+    if v1_ok and v2_ok:
+        recommendations.append("- Both API v1.0 and v2.0 are working")
+    elif v1_ok and not v2_ok:
+        recommendations.append("- Only API v1.0 works - check DataCore version for v2.0 support")
+    elif v2_ok and not v1_ok:
+        recommendations.append("- Only API v2.0 works - unusual, check DataCore configuration")
+
+    # Check performance endpoints
+    perf_results = [r for r in results.results if r[0] == "Performance"]
+    if perf_results:
+        perf_ok = any(r[2] == "PASS" for r in perf_results)
+        if perf_ok:
+            recommendations.append("- Performance data endpoints are working")
+        else:
+            recommendations.append("- Performance data endpoints may have issues")
 
     if not recommendations:
-        recommendations.append("- All tests passed! If issues persist, check DataCore server logs")
+        recommendations.append("- All tests passed! Configuration looks correct.")
 
     for rec in recommendations:
         print(rec)
 
     print()
     session.close()
-    return 0
+
+    # Return exit code based on critical tests
+    critical_failed = any(r[2] == "FAIL" for r in results.results if r[0] in ["Auth", "Network"])
+    return 1 if critical_failed else 0
 
 
 if __name__ == "__main__":
