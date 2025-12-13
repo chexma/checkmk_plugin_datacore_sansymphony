@@ -1,20 +1,22 @@
 #!/usr/bin/env python3
 # -*- encoding: utf-8; py-indent-offset: 4 -*-
 """
-DataCore REST API Debug Script (Extended Version)
+DataCore REST API Debug Script
 
 This script helps diagnose connection and API issues when connecting to
 the DataCore SANsymphony REST API.
 
 Tests performed:
-- Network connectivity (DNS, TCP port)
-- SSL/TLS handshake and certificate details
-- REST API endpoints (v1.0 and v2.0) with ServerHost header
-- ServerHost header variations
-- Available servers listing
+1. Network connectivity (DNS, TCP port)
+2. SSL/TLS handshake and certificate details
+3. Authentication with provided credentials
+4. REST API endpoints (v1.0 and v2.0)
+5. Available servers listing
+6. Performance data endpoint (v1.0)
 
 Usage:
     python3 debug_datacore_api.py --host 192.168.1.1 --user administrator --password SECRET --nodename ssv-node1
+    python3 debug_datacore_api.py --host 192.168.1.1 --user administrator --password SECRET --nodename ssv-node1 --timing
 """
 
 from __future__ import annotations
@@ -27,17 +29,19 @@ import ssl
 import sys
 import time
 from datetime import datetime
-from typing import Optional, Dict, Any, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 # Check for required modules
 try:
     import urllib3
+
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 except ImportError:
     print("WARNING: urllib3 not found, SSL warnings may appear")
 
 try:
     import requests
+
     REQUESTS_VERSION = requests.__version__
 except ImportError:
     print("ERROR: 'requests' module not found. Install with: pip install requests")
@@ -48,20 +52,22 @@ except ImportError:
 # Helper Classes and Functions
 # =============================================================================
 
+
 class Colors:
     """ANSI color codes for terminal output."""
-    GREEN = '\033[92m'
-    RED = '\033[91m'
-    YELLOW = '\033[93m'
-    BLUE = '\033[94m'
-    CYAN = '\033[96m'
-    BOLD = '\033[1m'
-    END = '\033[0m'
+
+    GREEN = "\033[92m"
+    RED = "\033[91m"
+    YELLOW = "\033[93m"
+    BLUE = "\033[94m"
+    CYAN = "\033[96m"
+    BOLD = "\033[1m"
+    END = "\033[0m"
 
     @classmethod
     def disable(cls):
         """Disable colors for non-terminal output."""
-        cls.GREEN = cls.RED = cls.YELLOW = cls.BLUE = cls.CYAN = cls.BOLD = cls.END = ''
+        cls.GREEN = cls.RED = cls.YELLOW = cls.BLUE = cls.CYAN = cls.BOLD = cls.END = ""
 
 
 def ok(msg):
@@ -101,6 +107,67 @@ def print_subheader(title):
 # =============================================================================
 # Test Functions
 # =============================================================================
+
+
+class TimingTracker:
+    """Track timing for API calls."""
+
+    def __init__(self):
+        self.timings = []  # type: List[Tuple[str, float]]
+        self.start_time = time.time()
+
+    def add(self, name, elapsed_ms):
+        # type: (str, float) -> None
+        self.timings.append((name, elapsed_ms))
+
+    def get_total_time(self):
+        # type: () -> float
+        return (time.time() - self.start_time) * 1000
+
+    def print_summary(self):
+        # type: () -> None
+        print_header("TIMING SUMMARY")
+
+        if not self.timings:
+            print(info("No timing data collected"))
+            return
+
+        # Sort by elapsed time (descending)
+        sorted_timings = sorted(self.timings, key=lambda x: x[1], reverse=True)
+
+        print("\n{BOLD}Individual API Calls (sorted by duration):{END}".format(
+            BOLD=Colors.BOLD, END=Colors.END))
+        print("-" * 50)
+
+        total_api_time = 0.0
+        for name, elapsed in sorted_timings:
+            total_api_time += elapsed
+            # Color code based on duration
+            if elapsed > 1000:
+                color = Colors.RED
+            elif elapsed > 500:
+                color = Colors.YELLOW
+            else:
+                color = Colors.GREEN
+            print("  {color}{elapsed:>8.0f}ms{END}  {name}".format(
+                color=color, elapsed=elapsed, name=name, END=Colors.END))
+
+        print("-" * 50)
+        print("  {BOLD}{total:>8.0f}ms{END}  Total API time".format(
+            BOLD=Colors.BOLD, total=total_api_time, END=Colors.END))
+
+        total_time = self.get_total_time()
+        print("  {BOLD}{total:>8.0f}ms{END}  Total script time".format(
+            BOLD=Colors.BOLD, total=total_time, END=Colors.END))
+
+        # Warning if close to CheckMK timeout
+        if total_api_time > 30000:
+            print("\n{warn}".format(warn=warn(
+                "API time exceeds 30 seconds - may cause CheckMK timeouts!")))
+        elif total_api_time > 15000:
+            print("\n{warn}".format(warn=warn(
+                "API time exceeds 15 seconds - consider optimizing")))
+
 
 class TestResults:
     """Collect and summarize test results."""
@@ -144,8 +211,11 @@ class TestResults:
         failed = sum(1 for _, _, s in self.results if s == "FAIL")
         warnings = sum(1 for _, _, s in self.results if s == "WARN")
 
-        print("\n{BOLD}Total: {p} passed, {f} failed, {w} warnings{END}".format(
-            BOLD=Colors.BOLD, p=passed, f=failed, w=warnings, END=Colors.END))
+        print(
+            "\n{BOLD}Total: {p} passed, {f} failed, {w} warnings{END}".format(
+                BOLD=Colors.BOLD, p=passed, f=failed, w=warnings, END=Colors.END
+            )
+        )
 
 
 def test_dns_resolution(host, results):
@@ -188,8 +258,19 @@ def test_tcp_connection(host, port, results):
         sock.close()
 
         if result == 0:
-            print(ok("Port {port} is open (connected in {elapsed:.1f}ms)".format(port=port, elapsed=elapsed)))
-            results.add("Network", "TCP Port {port}".format(port=port), True, "{elapsed:.1f}ms".format(elapsed=elapsed))
+            print(
+                ok(
+                    "Port {port} is open (connected in {elapsed:.1f}ms)".format(
+                        port=port, elapsed=elapsed
+                    )
+                )
+            )
+            results.add(
+                "Network",
+                "TCP Port {port}".format(port=port),
+                True,
+                "{elapsed:.1f}ms".format(elapsed=elapsed),
+            )
             return True
         else:
             print(fail("Port {port} is closed or filtered".format(port=port)))
@@ -230,31 +311,34 @@ def test_ssl_certificate(host, port, results):
                 print("    Protocol: {version}".format(version=version))
                 print("    Cipher: {cipher} ({bits} bits)".format(cipher=cipher[0], bits=cipher[2]))
 
-                cert_info['protocol'] = version
-                cert_info['cipher'] = cipher[0]
-                cert_info['bits'] = cipher[2]
+                cert_info["protocol"] = version
+                cert_info["cipher"] = cipher[0]
+                cert_info["bits"] = cipher[2]
 
                 # Try to get more cert details
                 try:
                     import subprocess
+
                     proc = subprocess.run(
-                        ['openssl', 'x509', '-noout', '-subject', '-issuer', '-dates'],
+                        ["openssl", "x509", "-noout", "-subject", "-issuer", "-dates"],
                         input=cert_decoded.encode(),
                         capture_output=True,
-                        timeout=5
+                        timeout=5,
                     )
                     if proc.returncode == 0:
                         output = proc.stdout.decode()
                         print("\n    Certificate Details:")
-                        for line in output.strip().split('\n'):
+                        for line in output.strip().split("\n"):
                             print("      {line}".format(line=line))
-                            if 'subject=' in line.lower():
-                                cert_info['subject'] = line.split('=', 1)[1] if '=' in line else line
-                            elif 'issuer=' in line.lower():
-                                cert_info['issuer'] = line.split('=', 1)[1] if '=' in line else line
+                            if "subject=" in line.lower():
+                                cert_info["subject"] = (
+                                    line.split("=", 1)[1] if "=" in line else line
+                                )
+                            elif "issuer=" in line.lower():
+                                cert_info["issuer"] = line.split("=", 1)[1] if "=" in line else line
 
                         # Check for self-signed
-                        if cert_info.get('subject') == cert_info.get('issuer'):
+                        if cert_info.get("subject") == cert_info.get("issuer"):
                             print(warn("Certificate is SELF-SIGNED"))
                             results.add_warning("SSL/TLS", "Certificate", "Self-signed certificate")
                         else:
@@ -263,7 +347,12 @@ def test_ssl_certificate(host, port, results):
                     print(info("(Could not parse certificate details - openssl not available)"))
                     results.add("SSL/TLS", "Certificate", True, "Details unavailable")
 
-                results.add("SSL/TLS", "Handshake", True, "{version} / {cipher}".format(version=version, cipher=cipher[0]))
+                results.add(
+                    "SSL/TLS",
+                    "Handshake",
+                    True,
+                    "{version} / {cipher}".format(version=version, cipher=cipher[0]),
+                )
                 return cert_info
 
     except ssl.SSLError as e:
@@ -285,8 +374,9 @@ def test_http_request(
     category="API",
     verify_ssl=False,
     show_body_on_success=False,
+    timing_tracker=None,
 ):
-    # type: (requests.Session, str, Dict[str, str], str, TestResults, str, bool, bool) -> Optional[requests.Response]
+    # type: (requests.Session, str, Dict[str, str], str, TestResults, str, bool, bool, Optional[TimingTracker]) -> Optional[requests.Response]
     """Make an HTTP request and analyze the response."""
 
     print("\n  Testing: {test_name}".format(test_name=test_name))
@@ -295,8 +385,8 @@ def test_http_request(
     # Show headers (hide password)
     headers_display = {}
     for k, v in headers.items():
-        if k.lower() == 'authorization':
-            headers_display[k] = 'Basic ***HIDDEN***'
+        if k.lower() == "authorization":
+            headers_display[k] = "Basic ***HIDDEN***"
         else:
             headers_display[k] = v
     print("  Headers: {headers}".format(headers=headers_display))
@@ -306,13 +396,33 @@ def test_http_request(
         response = session.get(url, headers=headers, timeout=15, verify=verify_ssl)
         elapsed = (time.time() - start) * 1000
 
+        # Track timing if enabled
+        if timing_tracker is not None:
+            timing_tracker.add(test_name, elapsed)
+
         status_ok = response.status_code == 200
 
         # Print result
         if status_ok:
-            print("  {result}".format(result=ok("Status: {code} ({elapsed:.0f}ms)".format(code=response.status_code, elapsed=elapsed))))
+            print(
+                "  {result}".format(
+                    result=ok(
+                        "Status: {code} ({elapsed:.0f}ms)".format(
+                            code=response.status_code, elapsed=elapsed
+                        )
+                    )
+                )
+            )
         else:
-            print("  {result}".format(result=fail("Status: {code} ({elapsed:.0f}ms)".format(code=response.status_code, elapsed=elapsed))))
+            print(
+                "  {result}".format(
+                    result=fail(
+                        "Status: {code} ({elapsed:.0f}ms)".format(
+                            code=response.status_code, elapsed=elapsed
+                        )
+                    )
+                )
+            )
 
         # Show response body for errors or if requested
         if not status_ok or response.status_code >= 400 or show_body_on_success:
@@ -330,6 +440,9 @@ def test_http_request(
     except requests.exceptions.Timeout:
         print("  {result}".format(result=fail("Request timed out")))
         results.add(category, test_name, False, "Timeout")
+        # Track timeout as 15000ms (the timeout value)
+        if timing_tracker is not None:
+            timing_tracker.add(test_name, 15000)
         return None
     except requests.exceptions.ConnectionError as e:
         print("  {result}".format(result=fail("Connection error: {e}".format(e=e))))
@@ -345,25 +458,34 @@ def test_http_request(
 # Main Function
 # =============================================================================
 
+
 def main():
     # type: () -> int
     parser = argparse.ArgumentParser(
-        description="Debug DataCore REST API connection issues (Extended Version)",
+        description="Debug DataCore REST API connection issues",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
     python3 debug_datacore_api.py --host 192.168.1.1 --user admin --password secret --nodename SSV1
     python3 debug_datacore_api.py --host datacore.local --user admin --password secret --nodename Server01 --no-color
+    python3 debug_datacore_api.py --host 192.168.1.1 --user admin --password secret --nodename SSV1 --timing
         """,
     )
     parser.add_argument("--host", required=True, help="DataCore server IP or hostname")
     parser.add_argument("--user", required=True, help="Username for authentication")
     parser.add_argument("--password", required=True, help="Password for authentication")
     parser.add_argument("--nodename", required=True, help="DataCore server nodename (Caption)")
-    parser.add_argument("--proto", default="https", choices=["http", "https"], help="Protocol (default: https)")
-    parser.add_argument("--port", type=int, default=None, help="Port (default: 443 for https, 80 for http)")
+    parser.add_argument(
+        "--proto", default="https", choices=["http", "https"], help="Protocol (default: https)"
+    )
+    parser.add_argument(
+        "--port", type=int, default=None, help="Port (default: 443 for https, 80 for http)"
+    )
     parser.add_argument("--verify-ssl", action="store_true", help="Verify SSL certificate")
     parser.add_argument("--no-color", action="store_true", help="Disable colored output")
+    parser.add_argument(
+        "--timing", action="store_true", help="Show timing summary for each API call"
+    )
 
     args = parser.parse_args()
 
@@ -376,7 +498,8 @@ Examples:
 
     # Build URLs
     base_url = "{proto}://{host}:{port}/RestService/rest.svc".format(
-        proto=args.proto, host=args.host, port=port)
+        proto=args.proto, host=args.host, port=port
+    )
 
     # Create auth header
     auth_string = "{user}:{password}".format(user=args.user, password=args.password)
@@ -394,6 +517,7 @@ Examples:
     # Create session
     session = requests.Session()
     results = TestResults()
+    timing = TimingTracker() if args.timing else None
 
     # =========================================================================
     # HEADER: System Info
@@ -440,9 +564,14 @@ Examples:
 
     print_subheader("With Provided Credentials + ServerHost")
     auth_response = test_http_request(
-        session, "{base}/1.0/servers".format(base=base_url),
+        session,
+        "{base}/1.0/servers".format(base=base_url),
         std_headers,
-        "Authentication Test", results, "Auth", args.verify_ssl
+        "Authentication Test",
+        results,
+        "Auth",
+        args.verify_ssl,
+        timing_tracker=timing,
     )
 
     if auth_response and auth_response.status_code != 200:
@@ -453,7 +582,9 @@ Examples:
             if "authorization" in error_msg.lower():
                 print("\n  {hint}".format(hint=warn("Hint: Check username/password")))
             elif "serverhost" in error_msg.lower():
-                print("\n  {hint}".format(hint=warn("Hint: ServerHost header value may be incorrect")))
+                print(
+                    "\n  {hint}".format(hint=warn("Hint: ServerHost header value may be incorrect"))
+                )
         except Exception:
             pass
 
@@ -466,58 +597,47 @@ Examples:
     print_subheader("API Version 1.0")
     for endpoint in ["servers", "pools", "alerts", "ports", "hostgroups", "snapshots"]:
         test_http_request(
-            session, "{base}/1.0/{endpoint}".format(base=base_url, endpoint=endpoint),
-            std_headers, "v1.0/{endpoint}".format(endpoint=endpoint), results, "API v1.0", args.verify_ssl
+            session,
+            "{base}/1.0/{endpoint}".format(base=base_url, endpoint=endpoint),
+            std_headers,
+            "v1.0/{endpoint}".format(endpoint=endpoint),
+            results,
+            "API v1.0",
+            args.verify_ssl,
+            timing_tracker=timing,
         )
 
     # API v2.0 endpoints
     print_subheader("API Version 2.0")
     for endpoint in ["servers", "pools", "virtualdisks", "physicaldisks", "hosts"]:
         test_http_request(
-            session, "{base}/2.0/{endpoint}".format(base=base_url, endpoint=endpoint),
-            std_headers, "v2.0/{endpoint}".format(endpoint=endpoint), results, "API v2.0", args.verify_ssl
+            session,
+            "{base}/2.0/{endpoint}".format(base=base_url, endpoint=endpoint),
+            std_headers,
+            "v2.0/{endpoint}".format(endpoint=endpoint),
+            results,
+            "API v2.0",
+            args.verify_ssl,
+            timing_tracker=timing,
         )
 
     # =========================================================================
-    # TEST 5: ServerHost Header Variations
+    # TEST 5: List Available Servers
     # =========================================================================
-    print_header("5. SERVERHOST HEADER VARIATIONS")
-
-    # Headers without ServerHost
-    headers_no_sh = {
-        "Authorization": auth_header,
-        "Content-Type": "application/json; charset=utf-8",
-        "Accept": "application/json",
-    }
-
-    serverhost_tests = [
-        ("No ServerHost", headers_no_sh),
-        ("Empty ServerHost", {**headers_no_sh, "ServerHost": ""}),
-        ("Original: {n}".format(n=args.nodename), {**headers_no_sh, "ServerHost": args.nodename}),
-        ("Lowercase: {n}".format(n=args.nodename.lower()), {**headers_no_sh, "ServerHost": args.nodename.lower()}),
-        ("Uppercase: {n}".format(n=args.nodename.upper()), {**headers_no_sh, "ServerHost": args.nodename.upper()}),
-    ]
-
-    for test_name, headers in serverhost_tests:
-        print_subheader("ServerHost: {name}".format(name=test_name))
-        test_http_request(
-            session, "{base}/1.0/servers".format(base=base_url),
-            headers, test_name, results, "ServerHost", args.verify_ssl
-        )
-
-    # =========================================================================
-    # TEST 6: List Available Servers
-    # =========================================================================
-    print_header("6. AVAILABLE SERVERS")
+    print_header("5. AVAILABLE SERVERS")
 
     # Try to get server list (with ServerHost header)
     try:
+        start = time.time()
         resp = session.get(
             "{base}/1.0/servers".format(base=base_url),
             headers=std_headers,
             timeout=15,
-            verify=args.verify_ssl
+            verify=args.verify_ssl,
         )
+        elapsed = (time.time() - start) * 1000
+        if timing is not None:
+            timing.add("List Servers", elapsed)
         if resp.status_code == 200:
             servers = resp.json()
             print(ok("Found {count} server(s):".format(count=len(servers))))
@@ -527,7 +647,11 @@ Examples:
                 server_id = server.get("Id", "Unknown")
                 state = server.get("State", "Unknown")
                 product_version = server.get("ProductVersion", "Unknown")
-                print("\n  {BOLD}{caption}{END}".format(BOLD=Colors.BOLD, caption=caption, END=Colors.END))
+                print(
+                    "\n  {BOLD}{caption}{END}".format(
+                        BOLD=Colors.BOLD, caption=caption, END=Colors.END
+                    )
+                )
                 print("    HostName: {hostname}".format(hostname=hostname))
                 print("    ID: {id}".format(id=server_id))
                 print("    State: {state}".format(state=state))
@@ -538,9 +662,19 @@ Examples:
                     if caption == args.nodename:
                         print("    {result}".format(result=ok("Matches provided nodename (exact)")))
                     else:
-                        print("    {result}".format(result=warn("Matches but case differs! Use: {caption}".format(caption=caption))))
+                        print(
+                            "    {result}".format(
+                                result=warn(
+                                    "Matches but case differs! Use: {caption}".format(
+                                        caption=caption
+                                    )
+                                )
+                            )
+                        )
         else:
-            print(fail("Could not retrieve server list (HTTP {code})".format(code=resp.status_code)))
+            print(
+                fail("Could not retrieve server list (HTTP {code})".format(code=resp.status_code))
+            )
             try:
                 print("  Response: {body}".format(body=resp.json()))
             except Exception:
@@ -549,18 +683,22 @@ Examples:
         print(fail("Error retrieving server list: {e}".format(e=e)))
 
     # =========================================================================
-    # TEST 7: Performance Data Endpoints
+    # TEST 6: Performance Data Endpoint (v1.0)
     # =========================================================================
-    print_header("7. PERFORMANCE DATA ENDPOINTS")
+    print_header("6. PERFORMANCE DATA ENDPOINT")
 
     # Try to get a pool and then its performance data
     try:
+        start = time.time()
         resp = session.get(
             "{base}/2.0/pools".format(base=base_url),
             headers=std_headers,
             timeout=15,
-            verify=args.verify_ssl
+            verify=args.verify_ssl,
         )
+        elapsed = (time.time() - start) * 1000
+        if timing is not None:
+            timing.add("Get Pools for Perf Test", elapsed)
         if resp.status_code == 200:
             pools = resp.json()
             if pools:
@@ -569,65 +707,54 @@ Examples:
                 pool_name = pool.get("Caption", "Unknown")
                 print(info("Testing performance endpoint for pool: {name}".format(name=pool_name)))
 
-                # Test v1.0 performance endpoint
-                print_subheader("v1.0 Performance Data")
                 test_http_request(
-                    session, "{base}/1.0/performance/{id}".format(base=base_url, id=pool_id),
-                    std_headers, "v1.0/performance (Pool)", results, "Performance", args.verify_ssl
-                )
-
-                # Test v2.0 performance endpoint
-                print_subheader("v2.0 Performance Data")
-                test_http_request(
-                    session, "{base}/2.0/pools/{id}/performance".format(base=base_url, id=pool_id),
-                    std_headers, "v2.0/pools/ID/performance", results, "Performance", args.verify_ssl
+                    session,
+                    "{base}/1.0/performance/{id}".format(base=base_url, id=pool_id),
+                    std_headers,
+                    "v1.0/performance",
+                    results,
+                    "Performance",
+                    args.verify_ssl,
+                    timing_tracker=timing,
                 )
             else:
-                print(info("No pools found to test performance endpoints"))
+                print(info("No pools found to test performance endpoint"))
         else:
-            print(warn("Could not get pools to test performance endpoints"))
+            print(warn("Could not get pools to test performance endpoint"))
     except Exception as e:
-        print(warn("Could not test performance endpoints: {e}".format(e=e)))
+        print(warn("Could not test performance endpoint: {e}".format(e=e)))
 
     # =========================================================================
     # SUMMARY AND RECOMMENDATIONS
     # =========================================================================
     results.print_summary()
 
+    # Print timing summary if enabled
+    if timing is not None:
+        timing.print_summary()
+
     print_header("RECOMMENDATIONS")
 
     # Analyze results and give recommendations
     recommendations = []
+    issues_found = False
+
+    # Check network issues
+    network_results = [r for r in results.results if r[0] == "Network"]
+    if any(r[2] == "FAIL" for r in network_results):
+        issues_found = True
+        recommendations.append("- Network connectivity issues detected - check firewall and DNS")
 
     # Check auth issues
     auth_results = [r for r in results.results if r[0] == "Auth"]
     if any(r[2] == "FAIL" for r in auth_results):
-        recommendations.append("- Check username and password are correct")
-        recommendations.append("- Verify the user has REST API access permissions in DataCore")
-        recommendations.append("- Ensure the ServerHost (nodename) value is correct")
+        issues_found = True
+        recommendations.append("- Authentication failed:")
+        recommendations.append("  - Check username and password are correct")
+        recommendations.append("  - Verify the user has REST API access permissions in DataCore")
+        recommendations.append("  - Ensure the ServerHost (nodename) value is correct")
 
-    # Check ServerHost issues
-    sh_results = [r for r in results.results if r[0] == "ServerHost"]
-    working_sh = [r[1] for r in sh_results if r[2] == "PASS"]
-    failed_sh = [r[1] for r in sh_results if r[2] == "FAIL"]
-
-    if "No ServerHost" in failed_sh:
-        recommendations.append("- ServerHost header is REQUIRED for this DataCore installation")
-
-    if working_sh:
-        # Find the best working ServerHost value
-        for w in working_sh:
-            if "Original" in w:
-                recommendations.append("- ServerHost '{nodename}' works correctly".format(nodename=args.nodename))
-                break
-            elif "Lowercase" in w and "Original" not in working_sh:
-                recommendations.append("- Use lowercase ServerHost: {n}".format(n=args.nodename.lower()))
-                break
-            elif "Uppercase" in w and "Original" not in working_sh and "Lowercase" not in working_sh:
-                recommendations.append("- Use uppercase ServerHost: {n}".format(n=args.nodename.upper()))
-                break
-
-    # Check API version issues
+    # Check API versions
     v1_results = [r for r in results.results if r[0] == "API v1.0"]
     v2_results = [r for r in results.results if r[0] == "API v2.0"]
 
@@ -635,32 +762,49 @@ Examples:
     v2_ok = any(r[2] == "PASS" for r in v2_results)
 
     if v1_ok and v2_ok:
-        recommendations.append("- Both API v1.0 and v2.0 are working")
+        recommendations.append("- REST API: Both v1.0 and v2.0 endpoints working")
     elif v1_ok and not v2_ok:
-        recommendations.append("- Only API v1.0 works - check DataCore version for v2.0 support")
+        issues_found = True
+        recommendations.append(
+            "- REST API: Only v1.0 works - check DataCore version for v2.0 support"
+        )
     elif v2_ok and not v1_ok:
-        recommendations.append("- Only API v2.0 works - unusual, check DataCore configuration")
+        issues_found = True
+        recommendations.append("- REST API: Only v2.0 works - unusual configuration")
+    else:
+        issues_found = True
+        recommendations.append("- REST API: No endpoints working - check configuration")
 
     # Check performance endpoints
     perf_results = [r for r in results.results if r[0] == "Performance"]
     if perf_results:
         perf_ok = any(r[2] == "PASS" for r in perf_results)
         if perf_ok:
-            recommendations.append("- Performance data endpoints are working")
+            recommendations.append("- Performance data: v1.0 endpoint working (used by plugin)")
         else:
-            recommendations.append("- Performance data endpoints may have issues")
+            issues_found = True
+            recommendations.append(
+                "- Performance data: Endpoint not working - performance metrics may be unavailable"
+            )
 
-    if not recommendations:
-        recommendations.append("- All tests passed! Configuration looks correct.")
+    # Final verdict
+    print()
+    if not issues_found:
+        print(ok("All critical tests passed - DataCore REST API is properly configured"))
+    else:
+        print(warn("Some issues detected - see recommendations below"))
 
+    print()
     for rec in recommendations:
         print(rec)
 
     print()
     session.close()
 
-    # Return exit code based on critical tests
-    critical_failed = any(r[2] == "FAIL" for r in results.results if r[0] in ["Auth", "Network"])
+    # Return exit code based on critical tests only
+    critical_failed = any(
+        r[2] == "FAIL" for r in results.results if r[0] in ["Auth", "Network", "Performance"]
+    )
     return 1 if critical_failed else 0
 
 
