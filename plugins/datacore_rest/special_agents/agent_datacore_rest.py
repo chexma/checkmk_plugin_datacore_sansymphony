@@ -115,7 +115,7 @@ def get_objects(object_name, api_url_base, headers, session, args):
         response = session.get(
             f"{api_url_base}/{object_name}",
             headers=headers,
-            timeout=30,
+            timeout=15,
             verify=args.verify_ssl,
         )
         response.raise_for_status()
@@ -141,7 +141,7 @@ def request_object_perfdata(data_object, api_url_base, headers, session, args):
         response = session.get(
             f'{api_url_base}/performance/{data_object["Id"]}',
             headers=headers,
-            timeout=30,
+            timeout=15,
             verify=args.verify_ssl,
         )
         response.raise_for_status()
