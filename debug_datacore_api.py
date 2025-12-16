@@ -14,9 +14,12 @@ Tests performed:
 5. Available servers listing
 6. Performance data endpoint (v1.0)
 
+Additionally shows timing summary for all API calls to help identify
+performance bottlenecks.
+
 Usage:
     python3 debug_datacore_api.py --host 192.168.1.1 --user administrator --password SECRET --nodename ssv-node1
-    python3 debug_datacore_api.py --host 192.168.1.1 --user administrator --password SECRET --nodename ssv-node1 --timing
+    python3 debug_datacore_api.py --host 192.168.1.1 --user admin --password SECRET --nodename ssv-node1 --redact
 """
 
 from __future__ import annotations
@@ -102,6 +105,27 @@ def print_subheader(title):
     # type: (str) -> None
     """Print a subsection header."""
     print("\n{CYAN}--- {title} ---{END}".format(CYAN=Colors.CYAN, title=title, END=Colors.END))
+
+
+# Global redact settings
+REDACT_ENABLED = False
+REDACT_VALUES = []  # type: List[str]
+REDACT_REPLACEMENT = "***redacted***"
+
+
+def redact(text):
+    # type: (str) -> str
+    """Redact sensitive values from text if redaction is enabled."""
+    if not REDACT_ENABLED or not text:
+        return text
+    result = text
+    for value in REDACT_VALUES:
+        if value and len(value) > 2:  # Only redact meaningful values
+            result = result.replace(value, REDACT_REPLACEMENT)
+            # Also replace lowercase/uppercase variants
+            result = result.replace(value.lower(), REDACT_REPLACEMENT)
+            result = result.replace(value.upper(), REDACT_REPLACEMENT)
+    return result
 
 
 # =============================================================================
@@ -226,7 +250,7 @@ def test_dns_resolution(host, results):
     # Check if host is already an IP
     try:
         socket.inet_aton(host)
-        print(info("Host '{host}' is already an IP address".format(host=host)))
+        print(info("Host '{host}' is already an IP address".format(host=redact(host))))
         results.add("Network", "DNS Resolution", True, "IP address provided")
         return host
     except socket.error:
@@ -235,11 +259,11 @@ def test_dns_resolution(host, results):
     # Try to resolve hostname
     try:
         ip = socket.gethostbyname(host)
-        print(ok("Resolved '{host}' to {ip}".format(host=host, ip=ip)))
-        results.add("Network", "DNS Resolution", True, "Resolved to {ip}".format(ip=ip))
+        print(ok("Resolved '{host}' to {ip}".format(host=redact(host), ip=redact(ip))))
+        results.add("Network", "DNS Resolution", True, "Resolved to {ip}".format(ip=redact(ip)))
         return ip
     except socket.gaierror as e:
-        print(fail("DNS resolution failed for '{host}': {e}".format(host=host, e=e)))
+        print(fail("DNS resolution failed for '{host}': {e}".format(host=redact(host), e=e)))
         results.add("Network", "DNS Resolution", False, str(e))
         return None
 
@@ -380,15 +404,15 @@ def test_http_request(
     """Make an HTTP request and analyze the response."""
 
     print("\n  Testing: {test_name}".format(test_name=test_name))
-    print("  URL: {url}".format(url=url))
+    print("  URL: {url}".format(url=redact(url)))
 
-    # Show headers (hide password)
+    # Show headers (hide password and redact sensitive values)
     headers_display = {}
     for k, v in headers.items():
         if k.lower() == "authorization":
             headers_display[k] = "Basic ***HIDDEN***"
         else:
-            headers_display[k] = v
+            headers_display[k] = redact(v)
     print("  Headers: {headers}".format(headers=headers_display))
 
     try:
@@ -396,7 +420,7 @@ def test_http_request(
         response = session.get(url, headers=headers, timeout=15, verify=verify_ssl)
         elapsed = (time.time() - start) * 1000
 
-        # Track timing if enabled
+        # Track timing
         if timing_tracker is not None:
             timing_tracker.add(test_name, elapsed)
 
@@ -429,10 +453,10 @@ def test_http_request(
             print("  Response Body ({length} bytes):".format(length=len(response.content)))
             try:
                 json_resp = response.json()
-                print("    {body}".format(body=json.dumps(json_resp, indent=4)))
+                print("    {body}".format(body=redact(json.dumps(json_resp, indent=4))))
             except json.JSONDecodeError:
                 body = response.text[:500] if response.text else "(empty)"
-                print("    {body}".format(body=body))
+                print("    {body}".format(body=redact(body)))
 
         results.add(category, test_name, status_ok, "HTTP {code}".format(code=response.status_code))
         return response
@@ -468,7 +492,7 @@ def main():
 Examples:
     python3 debug_datacore_api.py --host 192.168.1.1 --user admin --password secret --nodename SSV1
     python3 debug_datacore_api.py --host datacore.local --user admin --password secret --nodename Server01 --no-color
-    python3 debug_datacore_api.py --host 192.168.1.1 --user admin --password secret --nodename SSV1 --timing
+    python3 debug_datacore_api.py --host 192.168.1.1 --user admin --password secret --nodename SSV1 --redact
         """,
     )
     parser.add_argument("--host", required=True, help="DataCore server IP or hostname")
@@ -484,7 +508,9 @@ Examples:
     parser.add_argument("--verify-ssl", action="store_true", help="Verify SSL certificate")
     parser.add_argument("--no-color", action="store_true", help="Disable colored output")
     parser.add_argument(
-        "--timing", action="store_true", help="Show timing summary for each API call"
+        "--redact",
+        action="store_true",
+        help="Redact server names and hostnames in output for sharing logs",
     )
 
     args = parser.parse_args()
@@ -492,6 +518,12 @@ Examples:
     # Disable colors if requested
     if args.no_color or not sys.stdout.isatty():
         Colors.disable()
+
+    # Setup redaction if requested
+    global REDACT_ENABLED, REDACT_VALUES
+    if args.redact:
+        REDACT_ENABLED = True
+        REDACT_VALUES = [args.host, args.nodename, args.user]
 
     # Determine port
     port = args.port or (443 if args.proto == "https" else 80)
@@ -517,7 +549,7 @@ Examples:
     # Create session
     session = requests.Session()
     results = TestResults()
-    timing = TimingTracker() if args.timing else None
+    timing = TimingTracker()
 
     # =========================================================================
     # HEADER: System Info
@@ -526,9 +558,9 @@ Examples:
     print("  Timestamp: {ts}".format(ts=datetime.now().isoformat()))
     print("  Python: {ver}".format(ver=sys.version.split()[0]))
     print("  Requests: {ver}".format(ver=REQUESTS_VERSION))
-    print("  Target: {proto}://{host}:{port}".format(proto=args.proto, host=args.host, port=port))
-    print("  User: {user}".format(user=args.user))
-    print("  Nodename: {nodename}".format(nodename=args.nodename))
+    print("  Target: {proto}://{host}:{port}".format(proto=args.proto, host=redact(args.host), port=port))
+    print("  User: {user}".format(user=redact(args.user)))
+    print("  Nodename: {nodename}".format(nodename=redact(args.nodename)))
 
     # =========================================================================
     # TEST 1: Network Connectivity
@@ -649,10 +681,10 @@ Examples:
                 product_version = server.get("ProductVersion", "Unknown")
                 print(
                     "\n  {BOLD}{caption}{END}".format(
-                        BOLD=Colors.BOLD, caption=caption, END=Colors.END
+                        BOLD=Colors.BOLD, caption=redact(caption), END=Colors.END
                     )
                 )
-                print("    HostName: {hostname}".format(hostname=hostname))
+                print("    HostName: {hostname}".format(hostname=redact(hostname)))
                 print("    ID: {id}".format(id=server_id))
                 print("    State: {state}".format(state=state))
                 print("    Version: {ver}".format(ver=product_version))
@@ -666,7 +698,7 @@ Examples:
                             "    {result}".format(
                                 result=warn(
                                     "Matches but case differs! Use: {caption}".format(
-                                        caption=caption
+                                        caption=redact(caption)
                                     )
                                 )
                             )
@@ -676,9 +708,9 @@ Examples:
                 fail("Could not retrieve server list (HTTP {code})".format(code=resp.status_code))
             )
             try:
-                print("  Response: {body}".format(body=resp.json()))
+                print("  Response: {body}".format(body=redact(str(resp.json()))))
             except Exception:
-                print("  Response: {body}".format(body=resp.text[:200]))
+                print("  Response: {body}".format(body=redact(resp.text[:200])))
     except Exception as e:
         print(fail("Error retrieving server list: {e}".format(e=e)))
 
@@ -705,7 +737,7 @@ Examples:
                 pool = pools[0]
                 pool_id = pool.get("Id", "")
                 pool_name = pool.get("Caption", "Unknown")
-                print(info("Testing performance endpoint for pool: {name}".format(name=pool_name)))
+                print(info("Testing performance endpoint for pool: {name}".format(name=redact(pool_name))))
 
                 test_http_request(
                     session,
@@ -728,10 +760,7 @@ Examples:
     # SUMMARY AND RECOMMENDATIONS
     # =========================================================================
     results.print_summary()
-
-    # Print timing summary if enabled
-    if timing is not None:
-        timing.print_summary()
+    timing.print_summary()
 
     print_header("RECOMMENDATIONS")
 
