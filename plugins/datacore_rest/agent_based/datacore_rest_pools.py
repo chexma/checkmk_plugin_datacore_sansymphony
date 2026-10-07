@@ -214,11 +214,7 @@ from cmk.agent_based.v2 import (
     get_value_store,
     render,
 )
-from cmk.plugins.lib.df import (
-    FILESYSTEM_DEFAULT_LEVELS,
-    MAGIC_FACTOR_DEFAULT_PARAMS,
-    check_filesystem_levels,
-)
+from cmk.plugins.lib.df import check_filesystem_levels
 
 from cmk_addons.plugins.datacore_rest.lib import (
     SECTOR_SIZE_512,
@@ -420,8 +416,11 @@ check_plugin_datacore_rest_pool_capacity = CheckPlugin(
     discovery_function=discover_datacore_rest,
     check_function=check_datacore_rest_pool_capacity,
     check_ruleset_name="datacore_rest_pool_capacity",
+    # Same values as FILESYSTEM_DEFAULT_LEVELS and MAGIC_FACTOR_DEFAULT_PARAMS of
+    # cmk.plugins.lib.df, in the SimpleLevels format of the rule spec
     check_default_parameters={
-        **FILESYSTEM_DEFAULT_LEVELS,
-        **MAGIC_FACTOR_DEFAULT_PARAMS,
+        "levels": ("fixed", (80.0, 90.0)),
+        "magic_normsize": 20,
+        "levels_low": ("fixed", (50.0, 60.0)),
     },
 )
