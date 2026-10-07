@@ -12,7 +12,7 @@ Usage:
     python3 datacore_test_wrapper.py <static_data_file>
 
     Or as a datasource_programs entry:
-    python3 ~/local/bin/datacore_test_wrapper.py ~/local/tmp/akf-ssv1-09.txt
+    python3 ~/local/bin/datacore_test_wrapper.py $WORKSPACE/temp/akf-ssv1-09.txt
 
 The script:
 1. Reads the static agent output file
@@ -174,10 +174,10 @@ def main():
         print(f"Usage: {sys.argv[0]} <static_data_file>", file=sys.stderr)
         print(file=sys.stderr)
         print("Example:", file=sys.stderr)
-        print(f"  {sys.argv[0]} ~/local/tmp/akf-ssv1-09.txt", file=sys.stderr)
+        print(f"  {sys.argv[0]} $WORKSPACE/temp/akf-ssv1-09.txt", file=sys.stderr)
         print(file=sys.stderr)
         print("For datasource_programs configuration:", file=sys.stderr)
-        print(f"  python3 ~/local/bin/datacore_test_wrapper.py ~/local/tmp/akf-ssv1-09.txt", file=sys.stderr)
+        print(f"  python3 ~/local/bin/datacore_test_wrapper.py $WORKSPACE/temp/akf-ssv1-09.txt", file=sys.stderr)
         sys.exit(1)
 
     filepath = sys.argv[1]
