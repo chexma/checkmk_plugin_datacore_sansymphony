@@ -192,6 +192,8 @@ git checkout template/main -- .devcontainer .claude/settings.json .claude/hooks 
   values the old setup used (old Dockerfiles often hard-code
   `checkmk/check-mk-cloud`, i.e. `EDITION=cloud`). Ask the user whether to
   move to the template's `VARIANT` now or later (later = fewer changes at once).
+  Moving to 2.5 also changes `EDITION` (renamed editions: `cloud` →
+  `ultimate`, `enterprise` → `pro`, `raw` → `community`).
 - Old resource settings (`--cpus`, `--memory`, `NODE_OPTIONS`) are dropped
   with the old `devcontainer.json`; see the README notes if Pylance runs out
   of memory.

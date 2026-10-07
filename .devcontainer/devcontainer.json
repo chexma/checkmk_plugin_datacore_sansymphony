@@ -4,7 +4,9 @@
         "dockerfile": "Dockerfile",
         "args": {
             // Per plugin: pick the Checkmk edition and version to develop against.
-            // EDITION: cloud | enterprise | raw (image checkmk/check-mk-<EDITION>)
+            // EDITION (image checkmk/check-mk-<EDITION>):
+            //   2.4: raw | enterprise | cloud
+            //   2.5: community | pro | ultimate | ultimatemt (cloud -> ultimate)
             "EDITION": "cloud",
             "VARIANT": "2.4.0p27",
             "CLAUDE_CODE_VERSION": "latest"
