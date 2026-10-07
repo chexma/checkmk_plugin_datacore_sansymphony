@@ -64,8 +64,8 @@ jobs:
             -v "$PWD/plugins_legacy:$S/local/share/check_mk" \
             -v "$PWD/bin:$S/local/bin" \
             -v "$PWD/agents:$S/local/share/check_mk/agents" \
+            -v "$PWD/nagios_plugins:$S/local/lib/nagios/plugins" \
             plugin-dev -c "
-              rm -rf $S/local/lib/nagios/plugins && ln -s $W/nagios_plugins $S/local/lib/nagios/plugins &&
               bash .devcontainer/ci.sh ${{ startsWith(github.ref, 'refs/tags/v') && '--build' || '' }}"
 
       - name: Create release

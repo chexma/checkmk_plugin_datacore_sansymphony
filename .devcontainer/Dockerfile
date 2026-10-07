@@ -1,5 +1,5 @@
-ARG EDITION=cloud
-ARG VARIANT=2.4.0p27
+ARG EDITION=ultimate
+ARG VARIANT=2.5.0p15
 FROM checkmk/check-mk-${EDITION}:${VARIANT}
 
 # Create the site "cmk" at build time instead of on first container start.

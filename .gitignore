@@ -7,7 +7,7 @@
 # Plugin-specific Claude instructions stay private (see README)
 CLAUDE.local.md
 
-# Scratch space (mounted as ~/local/tmp in the site)
+# Scratch space (test data, agent output; not linked into the site)
 /temp/
 
 # mkp keeps enabled packages in local/share/check_mk, i.e. plugins_legacy/

@@ -30,8 +30,12 @@ Workspace directories are bind-mounted into the site:
 | `plugins_legacy/` | `~/local/share/check_mk/` |
 | `agents/` | `~/local/share/check_mk/agents/` |
 | `bin/` | `~/local/bin/` |
-| `nagios_plugins/` | `~/local/lib/nagios/plugins/` (symlink) |
-| `temp/` | `~/local/tmp/` (symlink, not tracked) |
+| `nagios_plugins/` | `~/local/lib/nagios/plugins/` |
+| `temp/` | not in the site; scratch space at `$WORKSPACE/temp`, not tracked |
+
+Never create symlinks in `~/local` that point to directories outside it:
+since Checkmk 2.5 every config generation (`cmk -U`/`-R`, activation)
+snapshots `~/local` and fails on them (`IsADirectoryError`).
 
 `sudo` is not available to Claude Code sessions, and the container cannot
 rebuild itself (no Docker socket); rebuilds are done from VS Code on the host.

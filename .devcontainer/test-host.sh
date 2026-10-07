@@ -57,9 +57,27 @@ host_exists() {
 }
 
 activate() {
-    api POST /domain-types/activation_run/actions/activate-changes/invoke \
-        '{"redirect": false, "sites": [], "force_foreign_changes": true}' >/dev/null ||
+    # The activation runs in the background: wait for it and check the result,
+    # otherwise a failing config generation goes unnoticed.
+    local run id errors
+    run=$(api POST /domain-types/activation_run/actions/activate-changes/invoke \
+        '{"redirect": false, "sites": [], "force_foreign_changes": true}') || {
         echo "WARNING: activating changes failed (cmk -I/-v still work, the GUI lags behind)"
+        return 0
+    }
+    id=$(jq -r .id <<<"$run")
+    # 204 = finished; anything else means it is still running
+    for _ in $(seq 1 60); do
+        [[ "$(curl -sS -o /dev/null -w '%{http_code}' -H "$AUTH" \
+            "$API/objects/activation_run/$id/actions/wait-for-completion/invoke")" == 204 ]] && break
+        sleep 2
+    done
+    errors=$(api GET "/objects/activation_run/$id" |
+        jq -r '.extensions.status_per_site[]? | select(.state != "success") | "\(.site): \(.status_details)"')
+    if [[ -n "$errors" ]]; then
+        echo "WARNING: activating changes failed (cmk -I/-v still work, run 'cmk -U' for details):" >&2
+        echo "$errors" >&2
+    fi
 }
 
 if [[ "${1:-}" == --remove ]]; then

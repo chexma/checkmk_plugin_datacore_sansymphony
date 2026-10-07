@@ -93,6 +93,12 @@ Collect and show the user:
   content is dropped in the merge.
 - tests that depend on the old layout: paths into a workspace copy
   (`local/lib/python3/...`), `sys.path` tweaks, stubs replacing `cmk` modules
+- symlinks in the site's `~/local` (`find ~/local -type l -printf "%p -> %l\n"`):
+  old setups linked `~/local/tmp` and `~/local/lib/nagios/plugins` to the
+  workspace. The new container uses bind mounts instead; anything else
+  pointing to a directory outside `~/local` breaks config generation on
+  Checkmk 2.5. References to `~/local/tmp` (docs, tests, scripts) must point
+  to the workspace's `temp/` instead.
 
 Then ask the user to confirm that a **copy of the whole plugin folder exists
 on the host** (e.g. `cp -a sep_sesam sep_sesam.bak`). Do not continue without it.
@@ -321,6 +327,8 @@ docker exec -u cmk -w /workspaces/<folder> <container> bash -lc '<command>'
    resulting agent call.
 4. **Verify**:
    - `mkp list` shows the package (registered by `startup.sh` from `package`)
+   - `cmk -U` succeeds (core config generation; on 2.5 it fails on symlinks
+     in `~/local` that point to directories outside it)
    - Before changing code: save `cmk -v --detect-plugins=<plugins> <host>`
      per test host to `temp/claude-migration/before-<host>.txt`, to diff
      after formatting and fixes (ignore PEND lines and the `[agent]` timing line).

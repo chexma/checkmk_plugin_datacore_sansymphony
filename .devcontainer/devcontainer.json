@@ -53,6 +53,9 @@
         { "source": "${localWorkspaceFolder}/plugins_legacy", "target": "/opt/omd/sites/cmk/local/share/check_mk", "type": "bind" },
         { "source": "${localWorkspaceFolder}/bin", "target": "/opt/omd/sites/cmk/local/bin", "type": "bind" },
         { "source": "${localWorkspaceFolder}/agents", "target": "/opt/omd/sites/cmk/local/share/check_mk/agents", "type": "bind" },
+        // Bind mounts, not symlinks: since 2.5 every config generation copies
+        // ~/local into a snapshot and fails on symlinks to directories outside it.
+        { "source": "${localWorkspaceFolder}/nagios_plugins", "target": "/opt/omd/sites/cmk/local/lib/nagios/plugins", "type": "bind" },
         // Claude Code config, login and memory: one named volume shared by all
         // plugin projects (log in once, survives rebuilds, never in the repo).
         { "source": "checkmk-claude-config", "target": "/opt/omd/sites/cmk/.claude", "type": "volume" }
