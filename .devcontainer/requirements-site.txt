@@ -1,0 +1,6 @@
+# Installed into the site Python (local/lib/python3) with --no-deps, so tests
+# import them next to the libraries Checkmk ships. Their dependencies must
+# either ship with Checkmk (pytest, pluggy, requests) or be listed here.
+pytest-cov==7.1.0
+coverage==7.16.2
+requests-mock==1.12.1

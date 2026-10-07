@@ -59,7 +59,7 @@ This plugin is written with the new CheckMK 2.3 check plugin API and will not wo
 
 #### 1.1 CheckMK RAW Edition
 
-- Download the latest MKP package `datacore_sansymphony-<version>.mkp`
+- Download the latest MKP package `datacore_sansymphony-<version>.mkp` from the [Releases page](https://github.com/chexma/checkmk_plugin_datacore_sansymphony/releases/latest)
 - Copy the file to your CheckMK server, e.g., to `/tmp`
 - Make sure that the file is accessible by the site user of your monitoring site: `chown <site_name> /tmp/datacore_sansymphony-<version>.mkp`
 - Switch to your site user with `su - <your_site_name>`
@@ -74,7 +74,7 @@ https://docs.checkmk.com/latest/en/mkps.html#_installation_of_an_mkp
 
 #### 1.2 CheckMK Enterprise, Cloud, Free and Managed Services Edition
 
-- Download the latest MKP package `datacore_sansymphony-<version>.mkp`
+- Download the latest MKP package `datacore_sansymphony-<version>.mkp` from the [Releases page](https://github.com/chexma/checkmk_plugin_datacore_sansymphony/releases/latest)
 - Open the CheckMK web interface and navigate to Setup → Extension packages
 - If "Extension packages" is not visible, click "show more" in the top right of the Setup menu
 - Select "Upload package"
