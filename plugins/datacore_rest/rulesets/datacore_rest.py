@@ -138,7 +138,8 @@ def _valuespec_special_agents_datacore_rest() -> Dictionary:
                 parameter_form=String(
                     title=Title("Advanced - Sansymphony Servername to fetch infos for"),
                     help_text=Help(
-                        "This is necessary, if the Sansymphony internal server name differs from your hostname in checkmk"
+                        "This is necessary, if the Sansymphony internal server name differs "
+                        "from your hostname in checkmk"
                     ),
                 ),
                 required=False,
@@ -148,7 +149,8 @@ def _valuespec_special_agents_datacore_rest() -> Dictionary:
                     title=Title("Advanced - SSL Certificate Verification"),
                     help_text=Help(
                         "Configure SSL certificate verification for HTTPS connections. "
-                        "Disable verification only if your SANsymphony server uses a self-signed certificate."
+                        "Disable verification only if your SANsymphony server uses "
+                        "a self-signed certificate."
                     ),
                     elements=[
                         SingleChoiceElement(

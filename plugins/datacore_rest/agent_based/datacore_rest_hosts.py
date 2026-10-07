@@ -154,7 +154,10 @@ def check_datacore_rest_hosts(item: str, section: Mapping[str, Any]) -> CheckRes
             if port["Status"] not in ["Present", "Connected"] or port["Connected"] is False:
                 disconnected_ports.append(port["Caption"])
         if len(disconnected_ports) > 0:
-            message = f"Host is only partially connected, disconnected ports: {','.join(disconnected_ports)}"
+            message = (
+                "Host is only partially connected, "
+                f"disconnected ports: {','.join(disconnected_ports)}"
+            )
             yield Result(state=State.WARN, summary=message)
         elif len(disconnected_ports) == 0:
             yield Result(state=State.OK, summary="Connected")

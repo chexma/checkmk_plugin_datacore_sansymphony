@@ -351,7 +351,11 @@ def check_datacore_rest_ports(
         for description, metric in performance_metrics:
             yield Metric(description, metric)
 
-        message = f"Read: {render.iobandwidth(rate['TotalBytesRead'])}, Write: {render.iobandwidth(rate['TotalBytesWritten'])}, Read IO/s: {rate['TotalReads']}/s, Write IO/s: {rate['TotalWrites']}/s"
+        message = (
+            f"Read: {render.iobandwidth(rate['TotalBytesRead'])}, "
+            f"Write: {render.iobandwidth(rate['TotalBytesWritten'])}, "
+            f"Read IO/s: {rate['TotalReads']}/s, Write IO/s: {rate['TotalWrites']}/s"
+        )
         yield Result(state=State.OK, summary=message)
 
 

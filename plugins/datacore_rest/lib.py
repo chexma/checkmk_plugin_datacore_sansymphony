@@ -81,7 +81,7 @@ def convert_timestamp(timestamp: str) -> str:
 
 
 def convert_timestamp_to_epoch(timestamp: str) -> float:
-    """Converts the 'CollectionTime' string of the API objects in miliseconds into epoch (in seconds)."""
+    """Converts the 'CollectionTime' string of the API objects (milliseconds) into epoch seconds."""
     if "+" in timestamp:
         timestamp = timestamp.split("+", 1)[0]
         epoch_time_in_seconds = int(timestamp[6:]) / 1000

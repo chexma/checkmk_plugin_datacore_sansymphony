@@ -98,14 +98,16 @@ def _formspec_datacore_rest_pool_capacity() -> Dictionary:
         help_text=Help(
             "Specify the threshold levels for pool capacity. The levels can be specified as "
             "percentages of the total pool size. Additionally, the magic factor allows for "
-            "dynamic level adjustments based on pool size - larger pools get more lenient thresholds."
+            "dynamic level adjustments based on pool size - larger pools get more lenient "
+            "thresholds."
         ),
         elements={
             "levels": DictElement(
                 parameter_form=SimpleLevels(
                     title=Title("Levels for pool usage"),
                     help_text=Help(
-                        "Specify the percentage levels at which warnings and critical alerts should be triggered. "
+                        "Specify the percentage levels at which warnings and critical alerts "
+                        "should be triggered. "
                         "These levels apply to the used space in the pool."
                     ),
                     level_direction=LevelDirection.UPPER,
@@ -177,7 +179,8 @@ rule_spec_datacore_rest_pool_capacity = CheckParameters(
     parameter_form=_formspec_datacore_rest_pool_capacity,
     title=Title("DataCore SANsymphony Pool Capacity"),
     help_text=Help(
-        "This ruleset allows you to configure thresholds for DataCore SANsymphony storage pool capacity. "
+        "This ruleset allows you to configure thresholds for DataCore SANsymphony storage "
+        "pool capacity. "
         "The pool is treated as a filesystem, with support for percentage levels and magic factor "
         "for dynamic thresholds based on pool size."
     ),

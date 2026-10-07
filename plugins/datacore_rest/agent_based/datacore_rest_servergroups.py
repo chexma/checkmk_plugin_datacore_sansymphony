@@ -136,15 +136,25 @@ def check_datacore_rest_servergroups(item: str, section: Mapping[str, Any]) -> C
     group_capacity = data["LicenseSettings"]["StorageCapacity"]["Value"]
     group_capacity_used = data["StorageUsed"]["Value"]
     next_expiration_date = convert_timestamp(data["NextExpirationDate"])
-    message = f"Group capacity: {render.bytes(group_capacity)}, Group capacity Used: {render.bytes(group_capacity_used)}, next expiration data: {next_expiration_date}"
+    message = (
+        f"Group capacity: {render.bytes(group_capacity)}, "
+        f"Group capacity Used: {render.bytes(group_capacity_used)}, "
+        f"next expiration data: {next_expiration_date}"
+    )
 
     if data["SmtpSettings"] is not None:
-        smtp_settings = f"SMTP Server: {data['SmtpSettings']['SmtpServer']}, E-Mail Address: {data['SmtpSettings']['EmailAddress']}"
+        smtp_settings = (
+            f"SMTP Server: {data['SmtpSettings']['SmtpServer']}, "
+            f"E-Mail Address: {data['SmtpSettings']['EmailAddress']}"
+        )
     else:
         smtp_settings = "Not configured"
 
     if data["SyslogSettings"] is not None:
-        syslog_settings = f"Syslog Server: {data['SyslogSettings']['SyslogServer']}, Log Level: {data['SyslogSettings']['SyslogLogLevel']}"
+        syslog_settings = (
+            f"Syslog Server: {data['SyslogSettings']['SyslogServer']}, "
+            f"Log Level: {data['SyslogSettings']['SyslogLogLevel']}"
+        )
     else:
         syslog_settings = "Not configured"
 

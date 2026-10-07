@@ -79,7 +79,11 @@ def check_datacore_rest_hostgroups(item: str, section: Mapping[str, Any]) -> Che
         max_data_transferred_per_sec if max_data_transferred_per_sec > 0 else "not enforced"
     )
 
-    message = f"{data['Alias']} - Max Operations per Sec: {MaxIoOperationsPerSec}, Max Data Transferred Per Sec: {MaxDataTransferredPerSec}, ChargeBack enabled: {data["StorageDomainSettings"]['ChargeBackEnabled']}"
+    message = (
+        f"{data['Alias']} - Max Operations per Sec: {MaxIoOperationsPerSec}, "
+        f"Max Data Transferred Per Sec: {MaxDataTransferredPerSec}, "
+        f"ChargeBack enabled: {data['StorageDomainSettings']['ChargeBackEnabled']}"
+    )
 
     yield Result(state=State(0), summary=message)
 

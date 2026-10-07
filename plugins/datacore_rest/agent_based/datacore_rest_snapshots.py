@@ -24,7 +24,7 @@ Output:
     "DestinationLogicalDiskId": "4222f406-18de-42fb-aea3-b2ae7d77b679",
     "ExtendedCaption": "myvirtualdisk1 @ 6/2/2024 6:49:10 PM UTC on SSV1",
     "Failure": 0,
-    "Id": "V.{7F77F087-202D-11EF-B804-000C2992E794}-00000001--V.{7F77F087-202D-11EF-B804-000C2992E794}-00000003",
+    "Id": "V.{7F77F087-202D-11EF-B804-000C2992E794}-00000001--V.{7F77F087-202D-11EF-B804-000C2992E794}-00000003",  # noqa: E501
     "Internal": false,
     "SequenceNumber": 67462,
     "SourceLogicalDiskId": "032c6b1a-f697-44c0-8d90-cb3698d59bf8",

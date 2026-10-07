@@ -1550,7 +1550,7 @@
         }
     ],
     "SnapshotMapStoreId": "",
-    "SnapshotMapStorePoolId": "4B273A2A-1FE0-41D0-B993-6F7B35672AAF:{4d235c44-e5c6-11ed-b80b-98f2b3e70bc1}",
+    "SnapshotMapStorePoolId": "4B273A2A-1FE0-41D0-B993-6F7B35672AAF:{4d235c44-e5c6-11ed-b80b-98f2b3e70bc1}",  # noqa: E501
     "State": 2,
     "Status": "Running",
     "StatusLevel": 0,
@@ -1629,7 +1629,11 @@ def check_datacore_rest_servers(item: str, section: Mapping[str, Any]) -> CheckR
     # LicensedCapacityLimit
 
     message = f"Version: {data['ProductVersion']}".replace(" ", "").replace(",", " ")
-    details = f"Version: {data['ProductVersion']}\n Build: {data['ProductBuild']}\n OS: {data['OsVersion']}\n CPUs: {data['ProcessorInfo']['NumberCores']} x {data['ProcessorInfo']['ProcessorName']}"
+    details = (
+        f"Version: {data['ProductVersion']}\n Build: {data['ProductBuild']}\n "
+        f"OS: {data['OsVersion']}\n "
+        f"CPUs: {data['ProcessorInfo']['NumberCores']} x {data['ProcessorInfo']['ProcessorName']}"
+    )
     yield Result(state=State.OK, summary=message, details=details)
 
     # Perfdata

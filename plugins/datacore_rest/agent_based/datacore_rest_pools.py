@@ -77,7 +77,7 @@ Output:
         {
             "Caption": "sv1-hb51-vol04",
             "DiskInRecoveryId": "",
-            "DiskPoolId": "4B273A2A-1FE0-41D0-B993-6F7B35672AAF:{4d235c44-e5c6-11ed-b80b-98f2b3e70bc1}",
+            "DiskPoolId": "4B273A2A-1FE0-41D0-B993-6F7B35672AAF:{4d235c44-e5c6-11ed-b80b-98f2b3e70bc1}",  # noqa: E501
             "DiskTier": 1,
             "ExtendedCaption": "Pool disk ssv1-hb51-vol04 on ssv1",
             "Id": "5399554d-4af5-4f92-a056-c64fb1ce5098",
@@ -101,7 +101,7 @@ Output:
         {
             "Caption": "ssv1-hb51-vol03",
             "DiskInRecoveryId": "",
-            "DiskPoolId": "4B273A2A-1FE0-41D0-B993-6F7B35672AAF:{4d235c44-e5c6-11ed-b80b-98f2b3e70bc1}",
+            "DiskPoolId": "4B273A2A-1FE0-41D0-B993-6F7B35672AAF:{4d235c44-e5c6-11ed-b80b-98f2b3e70bc1}",  # noqa: E501
             "DiskTier": 1,
             "ExtendedCaption": "Pool disk ssv1-hb51-vol03 on ssv1",
             "Id": "14d3e03f-20f2-448d-aad6-4502f66ef706",
@@ -125,7 +125,7 @@ Output:
         {
             "Caption": "ssv1-hb51-vol02",
             "DiskInRecoveryId": "",
-            "DiskPoolId": "4B273A2A-1FE0-41D0-B993-6F7B35672AAF:{4d235c44-e5c6-11ed-b80b-98f2b3e70bc1}",
+            "DiskPoolId": "4B273A2A-1FE0-41D0-B993-6F7B35672AAF:{4d235c44-e5c6-11ed-b80b-98f2b3e70bc1}",  # noqa: E501
             "DiskTier": 1,
             "ExtendedCaption": "Pool disk ssv1-hb51-vol02 on ssv1",
             "Id": "e60d31b0-e8d3-4cff-b448-181f261fff42",
@@ -149,7 +149,7 @@ Output:
         {
             "Caption": "ssv1-hb51-vol01",
             "DiskInRecoveryId": "",
-            "DiskPoolId": "4B273A2A-1FE0-41D0-B993-6F7B35672AAF:{4d235c44-e5c6-11ed-b80b-98f2b3e70bc1}",
+            "DiskPoolId": "4B273A2A-1FE0-41D0-B993-6F7B35672AAF:{4d235c44-e5c6-11ed-b80b-98f2b3e70bc1}",  # noqa: E501
             "DiskTier": 1,
             "ExtendedCaption": "Pool disk ssv1-hb51-vol01 on ssv1",
             "Id": "b3b2466d-42ce-4f0c-afb5-5dfd8a577525",
@@ -331,7 +331,10 @@ def check_datacore_rest_pools(
             rate["TotalReads"], rate["TotalWrites"], rate["TotalReadTime"], rate["TotalWriteTime"]
         )
 
-        message = f"avg. read latency: {average_read_latency}, avg. write latency: {average_write_latency}"
+        message = (
+            f"avg. read latency: {average_read_latency}, "
+            f"avg. write latency: {average_write_latency}"
+        )
         yield Result(state=State.OK, summary=message)
 
         # Yield all metrics

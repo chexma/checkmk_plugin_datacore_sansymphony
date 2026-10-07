@@ -97,7 +97,8 @@ def check_datacore_rest_alerts(params: Mapping[str, Any], section: list[Any]) ->
 
         text_string = message_text
 
-        # Replace the {0} {1}... placeholders in the alert text string with the data from the MessageData dictionary
+        # Replace the {0} {1}... placeholders in the alert text string with the data
+        # from the MessageData dictionary
         if message_data is not None:
             nr_of_placeholders = len(message_data)
             for message_idx in range(nr_of_placeholders):
