@@ -117,12 +117,12 @@ from cmk.agent_based.v2 import (
     Metric,
     Result,
     State,
-    get_rate,
     get_value_store,
 )
 
 from cmk_addons.plugins.datacore_rest.lib import (
     calculate_percentages,
+    calculate_performance_rates,
     convert_timestamp_to_epoch,
     discover_datacore_rest,
     parse_datacore_rest,
@@ -198,17 +198,13 @@ def check_datacore_rest_hosts(item: str, section: Mapping[str, Any]) -> CheckRes
             data["PerformanceData"]["CollectionTime"]
         )
 
-        rate = {}
-        for counter in raw_performance_counters:
-            rate[counter] = round(
-                get_rate(
-                    value_store,
-                    f"{item}.{counter}",
-                    current_collection_time_in_epoch,
-                    data["PerformanceData"][counter],
-                    raise_overflow=True,
-                )
-            )
+        rate = calculate_performance_rates(
+            value_store,
+            item,
+            raw_performance_counters,
+            current_collection_time_in_epoch,
+            data["PerformanceData"],
+        )
 
         performance_metrics = [
             ("disk_read_ios", rate["TotalReads"]),

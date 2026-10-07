@@ -19,7 +19,7 @@ import time
 from collections.abc import Mapping
 from typing import Any
 
-from cmk.agent_based.v2 import DiscoveryResult, Service, StringTable, get_rate
+from cmk.agent_based.v2 import DiscoveryResult, GetRateError, Service, StringTable, get_rate
 
 # =============================================================================
 # Constants
@@ -133,18 +133,28 @@ def calculate_performance_rates(
 
     Returns:
         Dictionary mapping counter names to their calculated rates (per second)
+
+    Raises:
+        GetRateError: after all counters are processed, if any counter has no
+            rate yet; every counter is stored, so all are ready on the next run
     """
     rate = {}
+    first_error: GetRateError | None = None
     for counter in counters:
-        rate[counter] = round(
-            get_rate(
-                value_store,
-                f"{item}.{counter}",
-                collection_time,
-                perf_data[counter],
-                raise_overflow=raise_overflow,
+        try:
+            rate[counter] = round(
+                get_rate(
+                    value_store,
+                    f"{item}.{counter}",
+                    collection_time,
+                    perf_data[counter],
+                    raise_overflow=raise_overflow,
+                )
             )
-        )
+        except GetRateError as exc:
+            first_error = first_error or exc
+    if first_error is not None:
+        raise first_error
     return rate
 
 

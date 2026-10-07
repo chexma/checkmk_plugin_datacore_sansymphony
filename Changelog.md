@@ -1,5 +1,6 @@
 # CHANGELOG
 
+- **2.4.9** - 07.10.2026 - Fix rate services staying PEND for several check intervals after discovery (only one counter was initialized per run); hosts use the shared rate helper
 - **2.4.8** - 07.10.2026 - Migrate repo to checkmk-plugin-template (devcontainer, CI, releases via GitHub), format code with black/isort, fix flake8 findings, pool capacity default parameters in rule spec format (fixes cmk-validate-plugins)
 - **2.4.7** - 12.12.2025 - raise rest api timeouts
 - **2.4.6** - 12.12.2025 - catch api error 400
