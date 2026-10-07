@@ -47,13 +47,8 @@ Output:
 }
 """
 
-from cmk_addons.plugins.datacore_rest.lib import (
-    parse_datacore_rest,
-    discover_datacore_rest,
-)
-
-from typing import Any
 from collections.abc import Mapping
+from typing import Any
 
 from cmk.agent_based.v2 import (
     AgentSection,
@@ -61,6 +56,11 @@ from cmk.agent_based.v2 import (
     CheckResult,
     Result,
     State,
+)
+
+from cmk_addons.plugins.datacore_rest.lib import (
+    discover_datacore_rest,
+    parse_datacore_rest,
 )
 
 
@@ -72,17 +72,11 @@ def check_datacore_rest_hostgroups(item: str, section: Mapping[str, Any]) -> Che
         return
 
     max_io_ops_per_sec = data["StorageDomainSettings"]["MaxIoOperationsPerSec"]
-    MaxIoOperationsPerSec = (
-        max_io_ops_per_sec if max_io_ops_per_sec > 0 else "not enforced"
-    )
+    MaxIoOperationsPerSec = max_io_ops_per_sec if max_io_ops_per_sec > 0 else "not enforced"
 
-    max_data_transferred_per_sec = data["StorageDomainSettings"][
-        "MaxDataTransferredPerSec"
-    ]
+    max_data_transferred_per_sec = data["StorageDomainSettings"]["MaxDataTransferredPerSec"]
     MaxDataTransferredPerSec = (
-        max_data_transferred_per_sec
-        if max_data_transferred_per_sec > 0
-        else "not enforced"
+        max_data_transferred_per_sec if max_data_transferred_per_sec > 0 else "not enforced"
     )
 
     message = f"{data['Alias']} - Max Operations per Sec: {MaxIoOperationsPerSec}, Max Data Transferred Per Sec: {MaxDataTransferredPerSec}, ChargeBack enabled: {data["StorageDomainSettings"]['ChargeBackEnabled']}"

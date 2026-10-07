@@ -34,22 +34,22 @@ Output:
 }
 """
 
-from cmk_addons.plugins.datacore_rest.lib import (
-    parse_datacore_rest_single,
-    discover_datacore_rest_single,
-    convert_epoch_to_readable,
-    convert_timestamp_to_epoch,
-)
-
 from typing import Any
 
 from cmk.agent_based.v2 import (
     AgentSection,
     CheckPlugin,
     CheckResult,
+    Metric,
     Result,
     State,
-    Metric,
+)
+
+from cmk_addons.plugins.datacore_rest.lib import (
+    convert_epoch_to_readable,
+    convert_timestamp_to_epoch,
+    discover_datacore_rest_single,
+    parse_datacore_rest_single,
 )
 
 agent_section_datacore_rest_snapshots = AgentSection(
@@ -90,8 +90,7 @@ def check_datacore_rest_snapshots(section: list[Any]) -> CheckResult:
         details += f"{convert_epoch_to_readable(date)} {message} \n"
 
     latest_entry = (
-        f"{convert_epoch_to_readable(top_ten_entries[0][0])}: "
-        f"{top_ten_entries[0][1][:80]}"
+        f"{convert_epoch_to_readable(top_ten_entries[0][0])}: " f"{top_ten_entries[0][1][:80]}"
     )
 
     message = f"Snapshots: {nr_of_snapshots}, Latest: {latest_entry}"

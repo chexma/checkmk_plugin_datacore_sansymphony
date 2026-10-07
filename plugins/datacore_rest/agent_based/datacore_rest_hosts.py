@@ -107,26 +107,25 @@ Output:
 }
 """
 
-from cmk_addons.plugins.datacore_rest.lib import (
-    parse_datacore_rest,
-    discover_datacore_rest,
-    calculate_percentages,
-    convert_timestamp_to_epoch,
-)
-
-
-from typing import Any
 from collections.abc import Mapping
+from typing import Any
 
 from cmk.agent_based.v2 import (
     AgentSection,
     CheckPlugin,
     CheckResult,
+    Metric,
     Result,
     State,
-    Metric,
-    get_value_store,
     get_rate,
+    get_value_store,
+)
+
+from cmk_addons.plugins.datacore_rest.lib import (
+    calculate_percentages,
+    convert_timestamp_to_epoch,
+    discover_datacore_rest,
+    parse_datacore_rest,
 )
 
 
@@ -152,10 +151,7 @@ def check_datacore_rest_hosts(item: str, section: Mapping[str, Any]) -> CheckRes
         disconnected_ports = []
         # check if host is partially connected
         for port in host_ports:
-            if (
-                port["Status"] not in ["Present", "Connected"]
-                or port["Connected"] is False
-            ):
+            if port["Status"] not in ["Present", "Connected"] or port["Connected"] is False:
                 disconnected_ports.append(port["Caption"])
         if len(disconnected_ports) > 0:
             message = f"Host is only partially connected, disconnected ports: {','.join(disconnected_ports)}"
@@ -220,14 +216,10 @@ def check_datacore_rest_hosts(item: str, section: Mapping[str, Any]) -> CheckRes
         ]
         for description, metric in performance_metrics:
             yield Metric(description, metric)
-        message = (
-            f"Read IO/s: {rate['TotalReads']}/s, Write IO/s: {rate['TotalWrites']}/s"
-        )
+        message = f"Read IO/s: {rate['TotalReads']}/s, Write IO/s: {rate['TotalWrites']}/s"
         yield Result(state=State.OK, summary=message)
 
-        percent_read, percent_write = calculate_percentages(
-            rate["TotalReads"], rate["TotalWrites"]
-        )
+        percent_read, percent_write = calculate_percentages(rate["TotalReads"], rate["TotalWrites"])
         message = f"Read / Write Ratio: {round(percent_read)}/{round(percent_write)}%"
         yield Result(state=State.OK, summary=message)
 

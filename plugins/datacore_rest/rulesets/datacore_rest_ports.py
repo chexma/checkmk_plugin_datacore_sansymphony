@@ -1,20 +1,18 @@
 #!/usr/bin/env python3
 """Ruleset definition for DataCore SANsymphony Ports"""
 
-
 from cmk.rulesets.v1 import Title
 from cmk.rulesets.v1.form_specs import (
     DictElement,
     Dictionary,
+    InputHint,
+    Integer,
+    LevelDirection,
+    SimpleLevels,
     SingleChoice,
     SingleChoiceElement,
-    Integer,
-    SimpleLevels,
-    LevelDirection,
-    InputHint,
-    migrate_to_integer_simple_levels
+    migrate_to_integer_simple_levels,
 )
-
 from cmk.rulesets.v1.rule_specs import CheckParameters, HostAndItemCondition, Topic
 
 
@@ -78,9 +76,9 @@ def _parameter_valuespec_datacore_rest_ports():
                             name="disconnected",
                             title=Title("Port is not connected"),
                         ),
-                    ]
+                    ],
                 )
-            )
+            ),
         },
     )
 

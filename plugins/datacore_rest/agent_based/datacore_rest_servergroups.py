@@ -105,14 +105,8 @@ Output:
 
 """
 
-from cmk_addons.plugins.datacore_rest.lib import (
-    discover_datacore_rest,
-    parse_datacore_rest,
-    convert_timestamp,
-)
-
-from typing import Any
 from collections.abc import Mapping
+from typing import Any
 
 from cmk.agent_based.v2 import (
     AgentSection,
@@ -121,6 +115,12 @@ from cmk.agent_based.v2 import (
     Result,
     State,
     render,
+)
+
+from cmk_addons.plugins.datacore_rest.lib import (
+    convert_timestamp,
+    discover_datacore_rest,
+    parse_datacore_rest,
 )
 
 

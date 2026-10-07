@@ -197,27 +197,27 @@ Output:
     }
 }}"""
 
-from typing import Any
 from collections.abc import Mapping
+from typing import Any
 
 from cmk.agent_based.v2 import (
     AgentSection,
     CheckPlugin,
     CheckResult,
+    Metric,
     Result,
     State,
-    Metric,
-    render,
-    get_value_store,
     check_levels,
+    get_value_store,
+    render,
 )
 
 from cmk_addons.plugins.datacore_rest.lib import (
-    parse_datacore_rest,
-    discover_datacore_rest,
-    convert_timestamp_to_epoch,
-    calculate_performance_rates,
     PORT_SKIP_ERROR_TYPES,
+    calculate_performance_rates,
+    convert_timestamp_to_epoch,
+    discover_datacore_rest,
+    parse_datacore_rest,
 )
 
 
@@ -311,8 +311,11 @@ def check_datacore_rest_ports(
 
         # Calculate rates using shared function
         rate = calculate_performance_rates(
-            value_store, item, raw_performance_counters,
-            current_collection_time, data["PerformanceData"]
+            value_store,
+            item,
+            raw_performance_counters,
+            current_collection_time,
+            data["PerformanceData"],
         )
 
         performance_metrics = [

@@ -140,28 +140,28 @@ Example Output
     "WriteThrough": false
 }"""
 
-from typing import Any
 from collections.abc import Mapping
+from typing import Any
 
 from cmk.agent_based.v2 import (
     AgentSection,
     CheckPlugin,
     CheckResult,
+    Metric,
     Result,
     State,
-    Metric,
-    render,
-    get_value_store,
     check_levels,
+    get_value_store,
+    render,
 )
 
 from cmk_addons.plugins.datacore_rest.lib import (
-    parse_datacore_rest,
-    discover_datacore_rest,
-    convert_timestamp_to_epoch,
+    SECTOR_SIZE_512,
     calculate_percentages,
     calculate_performance_rates,
-    SECTOR_SIZE_512,
+    convert_timestamp_to_epoch,
+    discover_datacore_rest,
+    parse_datacore_rest,
 )
 
 
@@ -266,8 +266,11 @@ def check_datacore_rest_virtualdisks(
 
         # Calculate rates using shared function
         rate = calculate_performance_rates(
-            value_store, item, raw_performance_counters,
-            current_collection_time, data["PerformanceData"]
+            value_store,
+            item,
+            raw_performance_counters,
+            current_collection_time,
+            data["PerformanceData"],
         )
 
         write_io_levels_upper = params.get("write_io_levels_upper", ("no_levels", None))
@@ -295,9 +298,7 @@ def check_datacore_rest_virtualdisks(
 
         # Read / Write Ratio
 
-        percent_read, percent_write = calculate_percentages(
-            rate["TotalReads"], rate["TotalWrites"]
-        )
+        percent_read, percent_write = calculate_percentages(rate["TotalReads"], rate["TotalWrites"])
         message = f"Read/Write Ratio: {round(percent_read)}/{round(percent_write)}%"
         yield Result(state=State.OK, summary=message)
 

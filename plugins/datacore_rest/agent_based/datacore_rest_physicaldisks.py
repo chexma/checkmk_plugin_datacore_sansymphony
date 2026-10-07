@@ -91,28 +91,28 @@
     "Usage": "In pool \"Disk pool 1\""
 }"""
 
-from typing import Any
 from collections.abc import Mapping
+from typing import Any
 
 from cmk.agent_based.v2 import (
     AgentSection,
     CheckPlugin,
     CheckResult,
+    Metric,
     Result,
     State,
-    Metric,
-    render,
-    get_value_store,
     check_levels,
+    get_value_store,
+    render,
 )
 
 from cmk_addons.plugins.datacore_rest.lib import (
-    parse_datacore_rest,
-    discover_datacore_rest,
-    calculate_percentages,
-    convert_timestamp_to_epoch,
-    calculate_performance_rates,
     calculate_average_latency,
+    calculate_percentages,
+    calculate_performance_rates,
+    convert_timestamp_to_epoch,
+    discover_datacore_rest,
+    parse_datacore_rest,
 )
 
 
@@ -170,24 +170,24 @@ def check_datacore_rest_physicaldisks(
 
         # Calculate rates using shared function
         rate = calculate_performance_rates(
-            value_store, item, raw_performance_counters,
-            current_collection_time, data["PerformanceData"]
+            value_store,
+            item,
+            raw_performance_counters,
+            current_collection_time,
+            data["PerformanceData"],
         )
 
         message = f"Read IO/s: {rate['TotalReads']}, Write IO/s: {rate['TotalWrites']}"
         yield Result(state=State.OK, summary=message)
 
         # Read / Write Ratio
-        percent_read, percent_write = calculate_percentages(
-            rate["TotalReads"], rate["TotalWrites"]
-        )
+        percent_read, percent_write = calculate_percentages(rate["TotalReads"], rate["TotalWrites"])
         message = f"Read / Write Ratio: {round(percent_read)}/{round(percent_write)}%"
         yield Result(state=State.OK, summary=message)
 
         # Average Latency using shared function
         average_read_latency, average_write_latency = calculate_average_latency(
-            rate["TotalReads"], rate["TotalWrites"],
-            rate["TotalReadsTime"], rate["TotalWritesTime"]
+            rate["TotalReads"], rate["TotalWrites"], rate["TotalReadsTime"], rate["TotalWritesTime"]
         )
 
         upper_read_latency_levels = params.get("upper_read_latency_levels", ("no_levels", None))

@@ -1569,26 +1569,26 @@
 }
 """
 
+from collections.abc import Generator, Mapping
 from typing import Any
-from collections.abc import Mapping, Generator
 
 from cmk.agent_based.v2 import (
     AgentSection,
     CheckPlugin,
     CheckResult,
+    HostLabel,
+    Metric,
     Result,
     State,
-    Metric,
     get_value_store,
-    HostLabel,
 )
 
 from cmk_addons.plugins.datacore_rest.lib import (
-    parse_datacore_rest,
-    discover_datacore_rest,
-    convert_timestamp_to_epoch,
     calculate_percentages,
     calculate_performance_rates,
+    convert_timestamp_to_epoch,
+    discover_datacore_rest,
+    parse_datacore_rest,
 )
 
 
@@ -1657,17 +1657,18 @@ def check_datacore_rest_servers(item: str, section: Mapping[str, Any]) -> CheckR
 
         # Calculate rates using shared function
         rate = calculate_performance_rates(
-            value_store, item, raw_performance_counters,
-            current_collection_time, data["PerformanceData"]
+            value_store,
+            item,
+            raw_performance_counters,
+            current_collection_time,
+            data["PerformanceData"],
         )
 
         message = f"Read IO/s: {rate['TotalReads']}, Write IO/s: {rate['TotalWrites']}"
         yield Result(state=State.OK, summary=message)
 
         # Read / Write Ratio
-        percent_read, percent_write = calculate_percentages(
-            rate["TotalReads"], rate["TotalWrites"]
-        )
+        percent_read, percent_write = calculate_percentages(rate["TotalReads"], rate["TotalWrites"])
 
         performance_metrics = [
             ("disk_read_ios", rate["TotalReads"]),
@@ -1689,7 +1690,7 @@ def check_datacore_rest_servers(item: str, section: Mapping[str, Any]) -> CheckR
 
 
 def host_label_datacore_rest_servers(
-    section: Mapping[str, Any]
+    section: Mapping[str, Any],
 ) -> Generator[HostLabel, None, None]:
     """Generate host labels for SANsymphony hosts."""
     for item_name, data in section.items():

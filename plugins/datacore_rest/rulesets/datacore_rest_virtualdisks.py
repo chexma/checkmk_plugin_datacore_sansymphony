@@ -8,15 +8,14 @@ from cmk.rulesets.v1 import Title
 from cmk.rulesets.v1.form_specs import (
     DictElement,
     Dictionary,
+    InputHint,
+    Integer,
+    LevelDirection,
+    SimpleLevels,
     SingleChoice,
     SingleChoiceElement,
-    Integer,
-    SimpleLevels,
-    LevelDirection,
-    InputHint,
     migrate_to_integer_simple_levels,
 )
-
 from cmk.rulesets.v1.rule_specs import CheckParameters, HostAndItemCondition, Topic
 
 
@@ -71,7 +70,7 @@ def _parameter_valuespec_datacore_rest_virtualdisks():
                             name="virtual_disk_is_not_served",
                             title=Title("Virtual Disk is not served"),
                         ),
-                    ]
+                    ],
                 )
             ),
             "virtual_disk_path_down": DictElement(
@@ -80,13 +79,13 @@ def _parameter_valuespec_datacore_rest_virtualdisks():
                     elements=[
                         SingleChoiceElement(
                             name="path_down_is_ok",
-                            title=Title("Path down is \"OK\""),
+                            title=Title('Path down is "OK"'),
                         ),
                         SingleChoiceElement(
                             name="path_down_is_warning",
-                            title=Title("Path down is \"Warning\""),
+                            title=Title('Path down is "Warning"'),
                         ),
-                    ]
+                    ],
                 )
             ),
         }

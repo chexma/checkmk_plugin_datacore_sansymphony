@@ -14,8 +14,7 @@
 # to the Free Software Foundation, Inc., 51 Franklin St,  Fifth Floor,
 # Boston, MA 02110-1301 USA.
 
-from cmk.rulesets.v1 import Title, Help
-
+from cmk.rulesets.v1 import Help, Title
 from cmk.rulesets.v1.form_specs import (
     CascadingSingleChoice,
     CascadingSingleChoiceElement,
@@ -30,8 +29,7 @@ from cmk.rulesets.v1.form_specs import (
     SingleChoiceElement,
     String,
 )
-
-from cmk.rulesets.v1.rule_specs import Topic, SpecialAgent
+from cmk.rulesets.v1.rule_specs import SpecialAgent, Topic
 
 
 def _valuespec_special_agents_datacore_rest() -> Dictionary:

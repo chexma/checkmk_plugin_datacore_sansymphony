@@ -16,9 +16,8 @@
 
 import json
 import time
-from typing import Any
-
 from collections.abc import Mapping
+from typing import Any
 
 from cmk.agent_based.v2 import DiscoveryResult, Service, StringTable, get_rate
 
@@ -83,8 +82,8 @@ def convert_timestamp(timestamp: str) -> str:
 
 def convert_timestamp_to_epoch(timestamp: str) -> float:
     """Converts the 'CollectionTime' string of the API objects in miliseconds into epoch (in seconds)."""
-    if '+' in timestamp:
-        timestamp = timestamp.split('+', 1)[0]
+    if "+" in timestamp:
+        timestamp = timestamp.split("+", 1)[0]
         epoch_time_in_seconds = int(timestamp[6:]) / 1000
     else:
         epoch_time_in_seconds = int(timestamp[6:-2]) / 1000
@@ -94,7 +93,7 @@ def convert_timestamp_to_epoch(timestamp: str) -> float:
 def convert_epoch_to_readable(epoch_time: float) -> str:
     """Prints a human readable Format for epoch."""
     time_object = time.localtime(epoch_time)
-    formatted_date = time.strftime('%d.%m.%Y %H:%M:%S', time_object)
+    formatted_date = time.strftime("%d.%m.%Y %H:%M:%S", time_object)
     return formatted_date
 
 
@@ -113,13 +112,14 @@ def calculate_percentages(value1: int, value2: int) -> tuple[float, float]:
 # Performance Rate Calculation
 # =============================================================================
 
+
 def calculate_performance_rates(
     value_store: Any,
     item: str,
     counters: list[str],
     collection_time: float,
     perf_data: dict[str, Any],
-    raise_overflow: bool = True
+    raise_overflow: bool = True,
 ) -> dict[str, int]:
     """Calculate rates for performance counters.
 
@@ -149,10 +149,7 @@ def calculate_performance_rates(
 
 
 def calculate_average_latency(
-    total_reads: int,
-    total_writes: int,
-    total_read_time: int,
-    total_write_time: int
+    total_reads: int, total_writes: int, total_read_time: int, total_write_time: int
 ) -> tuple[float, float]:
     """Calculate average read and write latency.
 
@@ -174,10 +171,8 @@ def calculate_average_latency(
 # Parameter Normalization
 # =============================================================================
 
-def normalize_simplelevel_params(
-    params: Mapping[str, Any],
-    keys: list[str]
-) -> dict[str, Any]:
+
+def normalize_simplelevel_params(params: Mapping[str, Any], keys: list[str]) -> dict[str, Any]:
     """Normalize SimpleLevels parameters from ruleset format.
 
     SimpleLevels from CheckMK rulesets returns: ('fixed', (warn, crit)) or ('no_levels', None)
@@ -197,9 +192,9 @@ def normalize_simplelevel_params(
         value = normalized[key]
         if isinstance(value, tuple) and len(value) == 2:
             mode, levels = value
-            if mode == 'fixed' and isinstance(levels, tuple):
+            if mode == "fixed" and isinstance(levels, tuple):
                 normalized[key] = levels
-            elif mode in ('no_levels', 'predictive'):
+            elif mode in ("no_levels", "predictive"):
                 normalized.pop(key, None)
     return normalized
 
@@ -207,6 +202,7 @@ def normalize_simplelevel_params(
 # =============================================================================
 # Safe Data Access
 # =============================================================================
+
 
 def safe_get(data: dict, *keys, default: Any = None) -> Any:
     """Safely get nested dictionary value.

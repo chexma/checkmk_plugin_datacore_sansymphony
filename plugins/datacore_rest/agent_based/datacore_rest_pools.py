@@ -201,34 +201,34 @@ Output:
     "Type": 0
 """
 
-from typing import Any
 from collections.abc import Mapping
+from typing import Any
 
 from cmk.agent_based.v2 import (
     AgentSection,
     CheckPlugin,
     CheckResult,
+    Metric,
     Result,
     State,
-    Metric,
-    render,
     get_value_store,
+    render,
 )
 from cmk.plugins.lib.df import (
-    check_filesystem_levels,
     FILESYSTEM_DEFAULT_LEVELS,
     MAGIC_FACTOR_DEFAULT_PARAMS,
+    check_filesystem_levels,
 )
 
 from cmk_addons.plugins.datacore_rest.lib import (
-    parse_datacore_rest,
-    discover_datacore_rest,
-    convert_timestamp_to_epoch,
+    SECTOR_SIZE_512,
+    calculate_average_latency,
     calculate_percentages,
     calculate_performance_rates,
-    calculate_average_latency,
+    convert_timestamp_to_epoch,
+    discover_datacore_rest,
     normalize_simplelevel_params,
-    SECTOR_SIZE_512,
+    parse_datacore_rest,
 )
 
 
@@ -314,21 +314,21 @@ def check_datacore_rest_pools(
 
         # Calculate rates using shared function
         rate = calculate_performance_rates(
-            value_store, item, raw_performance_counters,
-            current_collection_time, data["PerformanceData"]
+            value_store,
+            item,
+            raw_performance_counters,
+            current_collection_time,
+            data["PerformanceData"],
         )
 
         # Read / Write Ratio
-        percent_read, percent_write = calculate_percentages(
-            rate["TotalReads"], rate["TotalWrites"]
-        )
+        percent_read, percent_write = calculate_percentages(rate["TotalReads"], rate["TotalWrites"])
         message = f"Read/Write Ratio: {int(round(percent_read, 0))}/{int(round(percent_write, 0))}%"
         yield Result(state=State.OK, summary=message)
 
         # Average Latency using shared function
         average_read_latency, average_write_latency = calculate_average_latency(
-            rate["TotalReads"], rate["TotalWrites"],
-            rate["TotalReadTime"], rate["TotalWriteTime"]
+            rate["TotalReads"], rate["TotalWrites"], rate["TotalReadTime"], rate["TotalWriteTime"]
         )
 
         message = f"avg. read latency: {average_read_latency}, avg. write latency: {average_write_latency}"
@@ -371,6 +371,7 @@ check_plugin_datacore_rest_pools = CheckPlugin(
 # Pool Capacity #
 #################
 
+
 def check_datacore_rest_pool_capacity(
     item: str, params: Mapping[str, Any], section: Mapping[str, Any]
 ) -> CheckResult:
@@ -405,6 +406,7 @@ def check_datacore_rest_pool_capacity(
             used_space=used_mb,
             params=normalized_params,
         )
+
 
 ###
 

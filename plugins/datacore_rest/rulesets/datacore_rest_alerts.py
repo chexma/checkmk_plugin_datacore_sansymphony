@@ -1,21 +1,19 @@
 #!/usr/bin/env python3
 """Ruleset definition for DataCore SANsymphony Alerts"""
 
-
 from cmk.rulesets.v1 import Title
 from cmk.rulesets.v1.form_specs import (
+    DefaultValue,
     DictElement,
     Dictionary,
-    Integer,
-    SimpleLevels,
-    LevelDirection,
     InputHint,
+    Integer,
+    LevelDirection,
+    SimpleLevels,
     SingleChoice,
     SingleChoiceElement,
-    DefaultValue,
-    migrate_to_integer_simple_levels
+    migrate_to_integer_simple_levels,
 )
-
 from cmk.rulesets.v1.rule_specs import CheckParameters, HostCondition, Topic
 
 
@@ -36,17 +34,17 @@ def _parameter_valuespec_datacore_rest_alerts():
                     title=Title("Ignore SupportBundle collection messages from alerts"),
                     elements=[
                         SingleChoiceElement(
-                            name='remove',
+                            name="remove",
                             title=Title("Ignore messages"),
                         ),
                         SingleChoiceElement(
-                            name='dont_remove',
+                            name="dont_remove",
                             title=Title("Don´t ignore messages"),
                         ),
                     ],
-                    prefill=DefaultValue('remove'),
+                    prefill=DefaultValue("remove"),
                 )
-            )
+            ),
         },
     )
 

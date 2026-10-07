@@ -48,28 +48,27 @@ Output:
     "Visibility": 64
 }"""
 
-from typing import Any
 from collections.abc import Mapping
+from typing import Any
 
 from cmk.agent_based.v2 import (
     AgentSection,
     CheckPlugin,
     CheckResult,
+    Metric,
     Result,
     State,
-    Metric,
     check_levels,
 )
 
 from cmk_addons.plugins.datacore_rest.lib import (
+    ALERT_DISPLAY_LIMIT,
+    convert_epoch_to_readable,
+    convert_timestamp_to_epoch,
     discover_datacore_rest_single,
     parse_datacore_rest_single,
-    convert_timestamp_to_epoch,
-    convert_epoch_to_readable,
     safe_get,
-    ALERT_DISPLAY_LIMIT,
 )
-
 
 agent_section_datacore_rest_alerts = AgentSection(
     name="datacore_rest_alerts",
@@ -78,9 +77,7 @@ agent_section_datacore_rest_alerts = AgentSection(
 )
 
 
-def check_datacore_rest_alerts(
-    params: Mapping[str, Any], section: list[Any]
-) -> CheckResult:
+def check_datacore_rest_alerts(params: Mapping[str, Any], section: list[Any]) -> CheckResult:
     """Check state of DataCore Alerts."""
 
     alert_list = []
@@ -106,7 +103,9 @@ def check_datacore_rest_alerts(
             for message_idx in range(nr_of_placeholders):
                 placeholder = "{" + str(message_idx) + "}"
                 if placeholder in text_string:
-                    replacement = str(message_data[message_idx]) if message_data[message_idx] else ""
+                    replacement = (
+                        str(message_data[message_idx]) if message_data[message_idx] else ""
+                    )
                     text_string = text_string.replace(placeholder, replacement)
 
         remove_support = params.get("remove_support_bundle_messages", "remove")
@@ -128,10 +127,7 @@ def check_datacore_rest_alerts(
     for date, message in top_entries:
         details += f"{convert_epoch_to_readable(date)} {message} \n"
 
-    latest_entry = (
-        f"{convert_epoch_to_readable(top_entries[0][0])}: "
-        f"{top_entries[0][1][:80]}"
-    )
+    latest_entry = f"{convert_epoch_to_readable(top_entries[0][0])}: " f"{top_entries[0][1][:80]}"
 
     upper_levels = params.get("number_of_alerts", ("fixed", (1, 1)))
 

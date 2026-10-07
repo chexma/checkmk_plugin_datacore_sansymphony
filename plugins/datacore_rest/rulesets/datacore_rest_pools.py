@@ -31,10 +31,10 @@ from cmk.rulesets.v1.form_specs import (
 )
 from cmk.rulesets.v1.rule_specs import CheckParameters, HostAndItemCondition, Topic
 
-
 #############################
 # Pool Status Check Ruleset #
 #############################
+
 
 def _formspec_datacore_rest_pools() -> Dictionary:
     """
@@ -42,9 +42,7 @@ def _formspec_datacore_rest_pools() -> Dictionary:
     """
     return Dictionary(
         title=Title("Pool status parameters"),
-        help_text=Help(
-            "Configure the monitoring behavior for DataCore SANsymphony storage pools."
-        ),
+        help_text=Help("Configure the monitoring behavior for DataCore SANsymphony storage pools."),
         elements={
             "oversubscription_state": DictElement(
                 parameter_form=SingleChoice(

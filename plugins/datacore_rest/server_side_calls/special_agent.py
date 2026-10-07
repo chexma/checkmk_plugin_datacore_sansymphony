@@ -11,7 +11,6 @@ from cmk.server_side_calls.v1 import (
     SpecialAgentCommand,
     SpecialAgentConfig,
 )
-
 from pydantic import BaseModel
 
 

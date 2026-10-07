@@ -8,13 +8,12 @@ from cmk.rulesets.v1 import Title
 from cmk.rulesets.v1.form_specs import (
     DictElement,
     Dictionary,
-    Integer,
-    SimpleLevels,
-    LevelDirection,
     InputHint,
+    Integer,
+    LevelDirection,
+    SimpleLevels,
     migrate_to_integer_simple_levels,
 )
-
 from cmk.rulesets.v1.rule_specs import CheckParameters, HostAndItemCondition, Topic
 
 
