@@ -14,27 +14,63 @@
 # to the Free Software Foundation, Inc., 51 Franklin St,  Fifth Floor,
 # Boston, MA 02110-1301 USA.
 
+import argparse
 import base64
+import json
 import logging
 import sys
 from collections import namedtuple
-from collections.abc import Sequence
-from pathlib import Path
+from collections.abc import Callable, Sequence
 from typing import Any
 
 import requests
-from cmk.special_agents.v0_unstable.agent_common import (
-    SectionWriter,
-    special_agent_main,
-)
-from cmk.special_agents.v0_unstable.argument_parsing import (
-    Args,
-    create_default_argument_parser,
-)
-from cmk.utils import password_store
+import urllib3
+
+# CheckMK 2.5+: unstable helpers that replace the deprecated
+# cmk.special_agents.v0_unstable and cmk.utils.password_store (removed in 3.1.0).
+# On 2.3/2.4 they don't exist, so we fall back to the legacy API.
+try:
+    from cmk.password_store.v1_unstable import dereference_secret
+except ImportError:  # CheckMK 2.3/2.4
+    dereference_secret = None  # type: ignore[assignment]
+
+try:
+    from cmk.server_side_programs.v1_unstable import report_agent_crashes, vcrtrace
+except ImportError:  # CheckMK 2.3/2.4
+    report_agent_crashes = None  # type: ignore[assignment]
+    vcrtrace = None  # type: ignore[assignment]
+
+AGENT_VERSION = "2.5.0"
 
 
-def parse_arguments(argv: Sequence[str] | None) -> Args:
+def create_argument_parser() -> argparse.ArgumentParser:
+    """Parser with the common special agent options --debug, --verbose, --vcrtrace"""
+    if vcrtrace is None:  # CheckMK 2.3/2.4
+        from cmk.special_agents.v0_unstable.argument_parsing import (
+            create_default_argument_parser,
+        )
+
+        return create_default_argument_parser(description=__doc__)
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.formatter_class = argparse.RawTextHelpFormatter
+    parser.add_argument(
+        "--debug",
+        "-d",
+        action="store_true",
+        help="Enable debug mode (keep some exceptions unhandled)",
+    )
+    parser.add_argument("--verbose", "-v", action="count", default=0)
+    parser.add_argument(
+        "--vcrtrace",
+        "--tracefile",
+        default=False,
+        action=vcrtrace(filter_headers=[("authorization", "****")]),
+    )
+    return parser
+
+
+def parse_arguments(argv: Sequence[str] | None) -> argparse.Namespace:
     sections = [
         "alerts",
         "hosts",
@@ -48,7 +84,7 @@ def parse_arguments(argv: Sequence[str] | None) -> Args:
         "virtualdisks",
     ]
 
-    parser = create_default_argument_parser(description=__doc__)
+    parser = create_argument_parser()
 
     parser.add_argument(
         "-u", "--user", help="Username for DataCore Sansymphony V Login", required=True
@@ -56,7 +92,7 @@ def parse_arguments(argv: Sequence[str] | None) -> Args:
     parser.add_argument(
         "-s",
         "--password_id",
-        help="Password ID for DataCore Sansymphony V Login",
+        help="Password store reference '<id>:<store path>' for DataCore Sansymphony V Login",
         required=True,
     )
     parser.add_argument("-n", "--nodename", help="DataCore Node to fetch data for", required=True)
@@ -89,14 +125,32 @@ def parse_arguments(argv: Sequence[str] | None) -> Args:
     return parser.parse_args(argv)
 
 
-def get_session(args) -> requests.Session:
-    """Create requests session"""
-    pw_id, pw_path = args.password_id.split(":")
-    password: str = password_store.lookup(Path(pw_path), pw_id)
-    user: str = args.user
+def lookup_password(password_ref: str) -> str:
+    """Resolve a password store reference '<id>:<store path>' to the plaintext"""
+    if dereference_secret is not None:
+        return dereference_secret(password_ref).reveal()
 
+    # CheckMK 2.3/2.4
+    from pathlib import Path
+
+    from cmk.utils import password_store
+
+    pw_id, pw_path = password_ref.split(":", 1)
+    return password_store.lookup(Path(pw_path), pw_id)
+
+
+def write_section(name: str, items: Sequence[Any]) -> None:
+    """Write an agent section with one JSON object per line"""
+    sys.stdout.write(f"<<<datacore_rest_{name}:sep(0)>>>\n")
+    for item in items:
+        sys.stdout.write(json.dumps(item, sort_keys=True) + "\n")
+    sys.stdout.flush()
+
+
+def get_session(args, password: str) -> requests.Session:
+    """Create requests session"""
     session = requests.Session()
-    session.auth = (user, password)  # type: ignore[assignment]
+    session.auth = (args.user, password)
     session.verify = args.verify_ssl
     return session
 
@@ -205,12 +259,10 @@ def agent_datacore_rest_main(args: Any = None) -> int:
         Section(name="virtualdisks", api_version=2, has_perfdata=True, item_identifier=None),
     ]
 
-    # Create session
-    session = get_session(args)
+    password = lookup_password(args.password_id)
 
-    # Get password for Basic Auth header
-    pw_id, pw_path = args.password_id.split(":")
-    password = password_store.lookup(Path(pw_path), pw_id)
+    # Create session
+    session = get_session(args, password)
 
     # Create proper Base64 encoded auth header
     auth_string = f"{args.user}:{password}"
@@ -255,42 +307,74 @@ def agent_datacore_rest_main(args: Any = None) -> int:
                 resources_dict[section.name] = whole_section
 
     for section in sections:
-        if section.name in resources_dict:
-            if section.name in ["alerts", "snapshots"]:
-                with SectionWriter(f"datacore_rest_{section.name}") as writer:
-                    writer.append_json(resources_dict[section.name])
-            else:
-                for item in resources_dict[section.name]:
-                    if section.name == "virtualdisks":
-                        if not item["IsSnapshotVirtualDisk"] and (
-                            my_server_id in (item["FirstHostId"], item["SecondHostId"])
-                        ):
-                            with SectionWriter(f"datacore_rest_{section.name}") as writer:
-                                writer.append_json(item)
-                    elif section.name == "ports":
-                        if (
-                            item[section.item_identifier] == my_server_id
-                            and "Loopback" not in item["Caption"]
-                        ):
-                            with SectionWriter(f"datacore_rest_{section.name}") as writer:
-                                writer.append_json(item)
-                    elif section.item_identifier:
-                        if item[section.item_identifier] == my_server_id:
-                            with SectionWriter(f"datacore_rest_{section.name}") as writer:
-                                writer.append_json(item)
-                    else:
-                        with SectionWriter(f"datacore_rest_{section.name}") as writer:
-                            writer.append_json(item)
+        if section.name not in resources_dict:
+            continue
+        objects = resources_dict[section.name]
+        if section.name in ["alerts", "snapshots"]:
+            # whole list as a single JSON line
+            write_section(section.name, [objects])
+        elif section.name == "virtualdisks":
+            write_section(
+                section.name,
+                [
+                    item
+                    for item in objects
+                    if not item["IsSnapshotVirtualDisk"]
+                    and my_server_id in (item["FirstHostId"], item["SecondHostId"])
+                ],
+            )
+        elif section.name == "ports":
+            write_section(
+                section.name,
+                [
+                    item
+                    for item in objects
+                    if item[section.item_identifier] == my_server_id
+                    and "Loopback" not in item["Caption"]
+                ],
+            )
+        elif section.item_identifier:
+            write_section(
+                section.name,
+                [item for item in objects if item[section.item_identifier] == my_server_id],
+            )
+        else:
+            write_section(section.name, objects)
 
     # Close session
     session.close()
     return 0
 
 
-def main() -> int:
+def _run(main_fn: Callable[[argparse.Namespace], int], argv: Sequence[str] | None = None) -> int:
+    args = parse_arguments(sys.argv[1:] if argv is None else argv)
+    logging.basicConfig(
+        format="%(levelname)s %(asctime)s %(name)s: %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        level={0: logging.WARN, 1: logging.INFO}.get(args.verbose, logging.DEBUG),
+    )
+    if not args.verify_ssl:
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+    logging.getLogger("urllib3.connectionpool").setLevel(logging.INFO)
+    logging.getLogger("vcr").setLevel(logging.WARN)
+
+    if report_agent_crashes is not None and not args.debug:
+        # 2.5+: unhandled exceptions become a crash report in the GUI
+        return report_agent_crashes("datacore_rest", AGENT_VERSION)(main_fn)(args)
+
+    try:
+        return main_fn(args)
+    except Exception:
+        if args.debug:
+            raise
+        logging.exception("Unhandled exception in DataCore special agent")
+        return 1
+
+
+def main(argv: Sequence[str] | None = None) -> int:
     """Main entry point to be used"""
-    return special_agent_main(parse_arguments, agent_datacore_rest_main)
+    return _run(agent_datacore_rest_main, argv)
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
