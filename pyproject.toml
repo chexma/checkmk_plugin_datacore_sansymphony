@@ -1,6 +1,6 @@
 [project]
 name = "datacore-sansymphony"
-version = "2.4.4"
+version = "2.4.7"
 description = "CheckMK plugin for DataCore SANsymphony monitoring"
 authors = [
     { name = "Andre Eckstein", email = "andre.eckstein@bechtle.com" }
