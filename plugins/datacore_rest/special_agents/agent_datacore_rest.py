@@ -26,32 +26,15 @@ from typing import Any
 import requests
 import urllib3
 
-# CheckMK 2.5+: unstable helpers that replace the deprecated
-# cmk.special_agents.v0_unstable and cmk.utils.password_store (removed in 3.1.0).
-# On 2.3/2.4 they don't exist, so we fall back to the legacy API.
-try:
-    from cmk.password_store.v1_unstable import dereference_secret
-except ImportError:  # CheckMK 2.3/2.4
-    dereference_secret = None  # type: ignore[assignment]
-
-try:
-    from cmk.server_side_programs.v1_unstable import report_agent_crashes, vcrtrace
-except ImportError:  # CheckMK 2.3/2.4
-    report_agent_crashes = None  # type: ignore[assignment]
-    vcrtrace = None  # type: ignore[assignment]
+# CheckMK 2.5 unstable APIs (planned to become stable in 3.0.0)
+from cmk.password_store.v1_unstable import dereference_secret
+from cmk.server_side_programs.v1_unstable import report_agent_crashes, vcrtrace
 
 AGENT_VERSION = "2.5.0"
 
 
 def create_argument_parser() -> argparse.ArgumentParser:
     """Parser with the common special agent options --debug, --verbose, --vcrtrace"""
-    if vcrtrace is None:  # CheckMK 2.3/2.4
-        from cmk.special_agents.v0_unstable.argument_parsing import (
-            create_default_argument_parser,
-        )
-
-        return create_default_argument_parser(description=__doc__)
-
     parser = argparse.ArgumentParser(description=__doc__)
     parser.formatter_class = argparse.RawTextHelpFormatter
     parser.add_argument(
@@ -127,16 +110,7 @@ def parse_arguments(argv: Sequence[str] | None) -> argparse.Namespace:
 
 def lookup_password(password_ref: str) -> str:
     """Resolve a password store reference '<id>:<store path>' to the plaintext"""
-    if dereference_secret is not None:
-        return dereference_secret(password_ref).reveal()
-
-    # CheckMK 2.3/2.4
-    from pathlib import Path
-
-    from cmk.utils import password_store
-
-    pw_id, pw_path = password_ref.split(":", 1)
-    return password_store.lookup(Path(pw_path), pw_id)
+    return dereference_secret(password_ref).reveal()
 
 
 def write_section(name: str, items: Sequence[Any]) -> None:
@@ -358,17 +332,10 @@ def _run(main_fn: Callable[[argparse.Namespace], int], argv: Sequence[str] | Non
     logging.getLogger("urllib3.connectionpool").setLevel(logging.INFO)
     logging.getLogger("vcr").setLevel(logging.WARN)
 
-    if report_agent_crashes is not None and not args.debug:
-        # 2.5+: unhandled exceptions become a crash report in the GUI
-        return report_agent_crashes("datacore_rest", AGENT_VERSION)(main_fn)(args)
-
-    try:
+    if args.debug:
         return main_fn(args)
-    except Exception:
-        if args.debug:
-            raise
-        logging.exception("Unhandled exception in DataCore special agent")
-        return 1
+    # unhandled exceptions become a crash report in the GUI
+    return report_agent_crashes("datacore_rest", AGENT_VERSION)(main_fn)(args)
 
 
 def main(argv: Sequence[str] | None = None) -> int:

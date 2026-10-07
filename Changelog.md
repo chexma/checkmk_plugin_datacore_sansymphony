@@ -1,6 +1,6 @@
 # CHANGELOG
 
-- **2.5.0** - 07.10.2026 - Checkmk 2.5 support: the special agent uses the new password store (`cmk.password_store.v1_unstable`) and crash reports (`cmk.server_side_programs.v1_unstable`) instead of the deprecated `cmk.special_agents.v0_unstable`/`cmk.utils.password_store`, with fallback for 2.3/2.4. Rules and command line unchanged (existing 2.4 rules are migrated by `omd update`)
+- **2.5.0** - 07.10.2026 - Checkmk 2.5 support: the special agent uses the new password store (`cmk.password_store.v1_unstable`) and crash reports (`cmk.server_side_programs.v1_unstable`) instead of the deprecated `cmk.special_agents.v0_unstable`/`cmk.utils.password_store`, requires Checkmk 2.5.0p1 to 2.5.0p99. Rules and command line unchanged (existing 2.4 rules are migrated by `omd update`)
 - **2.4.9** - 07.10.2026 - Fix rate services staying PEND for several check intervals after discovery (only one counter was initialized per run); hosts use the shared rate helper
 - **2.4.8** - 07.10.2026 - Migrate repo to checkmk-plugin-template (devcontainer, CI, releases via GitHub), format code with black/isort, fix flake8 findings, pool capacity default parameters in rule spec format (fixes cmk-validate-plugins)
 - **2.4.7** - 12.12.2025 - raise rest api timeouts
