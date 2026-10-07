@@ -7,8 +7,8 @@
             // EDITION (image checkmk/check-mk-<EDITION>):
             //   2.4: raw | enterprise | cloud
             //   2.5: community | pro | ultimate | ultimatemt (cloud -> ultimate)
-            "EDITION": "cloud",
-            "VARIANT": "2.4.0p27",
+            "EDITION": "ultimate",
+            "VARIANT": "2.5.0p15",
             "CLAUDE_CODE_VERSION": "latest"
         },
         // Checkmk images exist for amd64 only; on Apple Silicon they run
